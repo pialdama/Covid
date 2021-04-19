@@ -150,7 +150,7 @@ DecesFM$DECES<- DecesFM$DECES*DecesFM$coefredress
 ##############################################################################################
 
 gRepartitionAge<-ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) + 
-   geom_histogram(data=filter(db1820,db1820$ADEC==2020),
+   geom_histogram(data=filter(db1820,db1820$ADEC==2018),
                   aes(x=age),
                   binwidth = 1,
                   size=1.2)+
@@ -164,8 +164,8 @@ gRepartitionAge<-ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) +
          plot.subtitle = element_text(size = 9)) +
    labs(x = "Age",
      y = "Nombre de décès par âge",
-     title = "Répartition des décès par âge et par sexe en 2020",
-     subtitle = "En noir, la moyenne 2018-2019 du nombre de décès par âge.",
+     title = "Répartition des décès par âge et par sexe en 2018",
+     subtitle = "En noir, la moyenne 2018-2019 du nombre de décès par âge et par sexe.",
      caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
 ggsave("gRepartitionAge.png", plot=gRepartitionAge, height = 5 , width = 12)
 
@@ -173,10 +173,11 @@ ggsave("gRepartitionAge.png", plot=gRepartitionAge, height = 5 , width = 12)
 gRepartitionAgeSexe<-ggplot(data=db1820,aes(x=age,after_stat(count))) +  
    geom_histogram(data=filter(db1820,db1820$ADEC==2020),aes(x=age,fill=MoisDeces), binwidth = 1,na.rm=TRUE,size=1.2)+
    geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020),
-                 aes(y = ..count.. / (n_distinct(db1820$ADEC)-1)), 
-                 color = "black", 
+                 aes(y = ..count.. / (n_distinct(db1820$ADEC)-1), linetype=MoisDeces, group=MoisDeces), 
+                 position  = "stack", 
                  binwidth = 1,
-                 size=0.5)+   facet_wrap(SEXE~.)+
+                 size=0.5)+   
+   facet_grid(rows=vars(SEXE))+
    theme_minimal() +
    theme(plot.title = element_text(size = 14, face = "bold"),
          plot.subtitle = element_text(size = 9)) +
@@ -185,7 +186,7 @@ gRepartitionAgeSexe<-ggplot(data=db1820,aes(x=age,after_stat(count))) +
         title = "Répartition des décès par âge et selon le sexe en 2020",
         subtitle = "En noir, la moyenne 2018-2019.",
         caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gRepartitionAgeSexe.png", plot=gRepartitionAgeSexe, height = 5 , width = 8)
+ggsave("gRepartitionAgeSexe.png", plot=gRepartitionAgeSexe, height = 5 , width = 10)
 
 
 gRepartitionAgeSexeMois<-ggplot(data=db1820,aes(x=age,after_stat(count))) +  
