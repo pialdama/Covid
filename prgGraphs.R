@@ -103,6 +103,8 @@ gRepartitionAge<-ggplot(data=db1820,aes(x=age,after_stat(count))) +
                  binwidth = 1,
                  size=0.5)+
    theme_minimal() +
+   theme(plot.title = element_text(size = 16, face = "bold"),
+         plot.subtitle = element_text(size = 9)) +
    labs(x = "Age",
      y = "Effectifs",
      title = "Répartition des décès par âge en 2020",
@@ -119,6 +121,8 @@ gRepartitionAgeSexe<-ggplot(data=db1820,aes(x=age,after_stat(count))) +
                  binwidth = 1,
                  size=0.5)+   facet_wrap(.~SEXE)+
    theme_minimal() +
+   theme(plot.title = element_text(size = 16, face = "bold"),
+         plot.subtitle = element_text(size = 9)) +
    labs(x = "Age",
         y = "Effectifs",
         title = "Répartition des décès par âge et selon le sexe en 2020",
@@ -136,6 +140,8 @@ gRepartitionAgeSexeMois<-ggplot(data=db1820,aes(x=age,after_stat(count))) +
                  size=0.5)+   
    facet_grid(MoisDeces~SEXE)+
    theme_minimal() +
+   theme(plot.title = element_text(size = 16, face = "bold"),
+         plot.subtitle = element_text(size = 9)) +
    labs(x = "Age",
         y = "Effectifs",
         title = "Répartition des décès par âge et selon le sexe et le mois en 2020",
@@ -204,6 +210,8 @@ gClasseAge<-ggplot(data=db1820ClasseAge,aes(x=JourMois, y=DECES)) +
                color="black") +
    facet_grid(ClasseAge~.,scales = "free") +
    theme_minimal() +
+   theme(plot.title = element_text(size = 16, face = "bold"),
+         plot.subtitle = element_text(size = 9)) +
    scale_x_discrete("Date",
                     breaks = c("01/01","02/01","03/01","04/01","05/01","06/01","07/01","08/01","09/01","10/01","11/01","12/01"),
                     labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
@@ -249,6 +257,8 @@ gClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
                color="black") +
    facet_grid(ClasseAge~SEXE,scales = "free") +
    theme_minimal() +
+   theme(plot.title = element_text(size = 16, face = "bold"),
+         plot.subtitle = element_text(size = 9)) +
    scale_x_discrete("Date",
                     breaks = c("01/01","02/01","03/01","04/01","05/01","06/01","07/01","08/01","09/01","10/01","11/01","12/01"),
                     labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
@@ -290,6 +300,8 @@ gTimeSeriesClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe) +
    scale_color_brewer("Annee", palette = "Set2")+
    facet_grid(ClasseAge~SEXE,scales = "free") +
    theme_minimal() +
+   theme(plot.title = element_text(size = 16, face = "bold"),
+         plot.subtitle = element_text(size = 9)) +
    labs( y = "Effectifs",
          title = "Décès quotidiens par classes d'âge, de 2018 à 2021",
          subtitle = "Moyenne glissante sur 7 jours. Tendance 2018-2019 en noir. France métropolitaine.",
@@ -379,7 +391,7 @@ DecesFM$se<-sqrt(phiPoisson*DecesFM$DecesAttendus)
 
 # Plot les données en time series
 gTimeSeriesPoisson<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2014)) +
-   geom_ribbon(aes(x=Date, ymin = DecesAttendus - 1.96*se, ymax = DecesAttendus + 1.96*se), fill = "lightgray") +
+   geom_ribbon(aes(x=Date, ymin = DecesAttendus - 1.96*se, ymax = DecesAttendus + 1.96*se), fill = "blue", alpha=0.1) +
    geom_ma(aes(x=Date, y=DECES),ma_fun=SMA,n=7, size=0.5, linetype = "solid", color = "black") +
    geom_line(aes(x=Date, y=DecesAttendus),colour="blue",size=1) +
    theme_minimal() +
@@ -390,5 +402,5 @@ gTimeSeriesPoisson<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2014)) +
         title = "Décès quotidiens de 2014 à 2021 en France métropolitaine",
         subtitle = "En bleu, la tendance estimée de 2014 à 2019, par un modèle Quasi-Poisson. Moyenne glissante sur 7 jours.",
         caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, height = 4 , width =8)
+ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, height = 5 , width =12)
 
