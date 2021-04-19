@@ -95,7 +95,7 @@ DecesFM$Mois<-as.character(format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%m")
 
 db1820$ADEC<-as.character(db1820$ADEC)
 
-ggplot(data=db1820,aes(x=age,after_stat(count))) + 
+gRepartitionAge<-ggplot(data=db1820,aes(x=age,after_stat(count))) + 
    geom_histogram(data=filter(db1820,db1820$ADEC==2020),aes(x=age),color = "lightblue", binwidth = 1,na.rm=TRUE,size=1.2)+
    geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020),
                  aes(y = ..count.. / (n_distinct(db1820$ADEC)-1)), 
@@ -108,9 +108,10 @@ ggplot(data=db1820,aes(x=age,after_stat(count))) +
      title = "Répartition des décès par âge en 2020",
      subtitle = "En noir, la moyenne 2018-2019.",
      caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
+ggsave("gRepartitionAge.png", plot=gRepartitionAge, height = 5 , width = 6)
 
 
-ggplot(data=db1820,aes(x=age,after_stat(count))) +  
+gRepartitionAgeSexe<-ggplot(data=db1820,aes(x=age,after_stat(count))) +  
    geom_histogram(data=filter(db1820,db1820$ADEC==2020),aes(x=age),color = "lightblue", binwidth = 1,na.rm=TRUE,size=1.2)+
    geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020),
                  aes(y = ..count.. / (n_distinct(db1820$ADEC)-1)), 
@@ -123,6 +124,8 @@ ggplot(data=db1820,aes(x=age,after_stat(count))) +
         title = "Répartition des décès par âge et selon le sexe en 2020",
         subtitle = "En noir, la moyenne 2018-2019.",
         caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
+ggsave("gRepartitionAgeSexe.png", plot=gRepartitionAgeSexe, height = 5 , width = 6)
+
 
 gRepartitionAgeSexeMois<-ggplot(data=db1820,aes(x=age,after_stat(count))) +  
    geom_histogram(data=filter(db1820,db1820$ADEC==2020),aes(x=age),color = "lightblue", binwidth = 1,na.rm=TRUE,size=1.2)+
@@ -307,7 +310,7 @@ DecesFM$JourMois<-format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%m/%d")
 DecesFM$JourMoisBis<-format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%b %d")
 DecesFM$Annee<-format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%Y")
 
-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=JourMois, y=DECES)) +
+gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=JourMois, y=DECES)) +
    geom_ma(data=filter(DecesFM,DecesFM$Annee>=2000 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
            aes(group=Annee),
            ma_fun = SMA, 
@@ -337,13 +340,15 @@ ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=JourMois, y=DECES)) +
                data=filter(DecesFM,DecesFM$Annee>=2010 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
                show.legend = FALSE)   +
    theme_minimal() +
-   theme(plot.title = element_text(size = 16, face = "bold")) +
+   theme(plot.title = element_text(size = 16, face = "bold"),
+         plot.subtitle = element_text(size = 9)) +
    scale_x_discrete(breaks = c("01/01","02/01","03/01","04/01","05/01","06/01","07/01","08/01","09/01","10/01","11/01","12/01"),
                     labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
    labs(y=NULL, x= NULL,
         title = "Décès quotidiens en 2020 et 2021 en France métropolitaine",
         subtitle = "En noir, la tendance calculée de 2014 à 2019 et en pointillé, la tendance décennale. Moyenne mobile sur 7 jours.",
         caption = " Source : Insee, fichier des décès individuels. Calculs : @paldama.")
+ggsave("gTimeSeriesTransversal.png",plot=gTimeSeriesTransversal, height = 4 , width =8)
 
 
 ############################################################################################################
@@ -373,14 +378,17 @@ DecesFM$se<-sqrt(phiPoisson*DecesFM$DecesAttendus)
 
 
 # Plot les données en time series
-ggplot(data=filter(DecesFM,DecesFM$Annee>=2014)) +
+gTimeSeriesPoisson<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2014)) +
    geom_ribbon(aes(x=Date, ymin = DecesAttendus - 1.96*se, ymax = DecesAttendus + 1.96*se), fill = "lightgray") +
-   geom_line(aes(x=Date, y=DECES), size=0.5) +
-   geom_line(aes(x=Date, y=DecesAttendus),colour="blue",size=1.5) +
+   geom_ma(aes(x=Date, y=DECES),ma_fun=SMA,n=7, size=0.5, linetype = "solid", color = "black") +
+   geom_line(aes(x=Date, y=DecesAttendus),colour="blue",size=1) +
    theme_minimal() +
-   labs(x = "Date",
-        y = "Effectifs",
-        title = "Décès quotidiens de 2014 à 2021",
-        subtitle = "France métropolitaine",
+   theme(plot.title = element_text(size = 16, face = "bold"),
+         plot.subtitle = element_text(size = 9)) +
+   labs(x = NULL,
+        y = NULL,
+        title = "Décès quotidiens de 2014 à 2021 en France métropolitaine",
+        subtitle = "En bleu, la tendance estimée de 2014 à 2019, par un modèle Quasi-Poisson. Moyenne glissante sur 7 jours.",
         caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
+ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, height = 4 , width =8)
 
