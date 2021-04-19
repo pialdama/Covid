@@ -61,6 +61,40 @@ db1820<-rbind.data.frame(db2018,db2019,db2020)
 db1820$AnneeDeces<-as.character(db1820$ADEC)
 db1820$MoisDeces<-format(as.Date(db1820$Date, format="%d/%m/%Y"),"(%m) %B")
 
+
+
+
+##############################################################################################
+##############################################################################################
+# Redressement des series Insee
+##############################################################################################
+##############################################################################################
+
+# Charge les données pour le redressement
+dbRedress <- read.csv("~/Documents/Covid/RedressementDistance.csv",sep=";",dec=",")
+# Normalise le coefficient moyen et la variable de distance
+dbRedress$dist<-dbRedress$dist-10
+dbRedress$coefNorm <- dbRedress$coef - c(rep(1))
+# Estime un modèle polynomial inverse
+model.Redressement <- lm(coefNorm ~ I((dist)^-1) + I((dist)^-2) + I((dist)^-3) + + I((dist)^-4) -1,
+                         data = dbRedress)
+summary(model.Redressement)
+dbRedress$coefsmooth<-predict(model.Redressement)
+# plot les données et le modèle
+ggplot(data = dbRedress) +
+   geom_point(aes(x=dist,y=coefNorm)) +
+   geom_smooth(aes(x=dist,y=coefNorm),
+               se = FALSE, 
+               method = lm,
+               formula = y ~ I((x)^-1) + I((x)^-2) + I((x)^-3) + I((x)^-4) -1  ) 
+
+# Sauvegarde les coefficients
+coef1<-model.Redressement$coefficients[[ 1 ]] # 1/(dist-10)
+coef2<-model.Redressement$coefficients[[ 2 ]] # 1/(dist-10)^2
+coef3<-model.Redressement$coefficients[[ 3 ]] # 1/(dist-10)^3
+coef4<-model.Redressement$coefficients[[ 4 ]] # 1/(dist-10)^4
+
+
 ##############################################################################################
 ##############################################################################################
 # Merge les données quotidiennes historiques avec les fichiers 2020/21
@@ -86,6 +120,27 @@ DecesFE$Mois<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%m")
 
 DecesFM$Annee<-as.character(format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%Y"))
 DecesFM$Mois<-as.character(format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%m"))
+
+# Redressement
+# crée la variable de distance
+DecesFE$distadj <- c(nrow(DecesFE):1)
+DecesFM$distadj <- c(nrow(DecesFM):1)
+# crée des vecteurs avec les coefficients
+DecesFE$coef1 <- c(rep(coef1))
+DecesFE$coef2 <- c(rep(coef2))
+DecesFE$coef3 <- c(rep(coef3))
+DecesFE$coef4 <- c(rep(coef4))
+DecesFM$coef1 <- c(rep(coef1))
+DecesFM$coef2 <- c(rep(coef2))
+DecesFM$coef3 <- c(rep(coef3))
+DecesFM$coef4 <- c(rep(coef4))
+# crée le coefficient de redressement
+DecesFE$coefredress <- 1 + DecesFE$coef1/DecesFE$distadj + DecesFE$coef2/(DecesFE$distadj)^2  + DecesFE$coef3/(DecesFE$distadj)^3   + DecesFE$coef4/(DecesFE$distadj)^4 
+DecesFM$coefredress <- 1 + DecesFM$coef1/DecesFM$distadj + DecesFM$coef2/(DecesFM$distadj)^2  + DecesFM$coef3/(DecesFM$distadj)^3   + DecesFM$coef4/(DecesFM$distadj)^4 
+# correction des séries de décès
+DecesFE$DECES<- DecesFE$DECES*DecesFE$coefredress 
+DecesFM$DECES<- DecesFM$DECES*DecesFM$coefredress 
+
 
 ##############################################################################################
 ##############################################################################################
@@ -328,20 +383,20 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
            ma_fun = SMA, 
            n = 7,
            linetype = "solid",
-           color="gray",size=0.3) +
+           color="gray",size=0.2) +
    geom_ma(data=filter(DecesFM,DecesFM$Annee>=2020),
            aes(color = Annee, group = Annee),
            ma_fun = SMA, 
            n = 7,
            linetype = "solid",
-           size = 1.4) +
+           size = 1) +
    scale_colour_manual(values = c("blue","red"))  +
    geom_smooth(aes(group=1),
                method="lm",
                formula = y ~ splines::bs(x,6),
                color="black",
                se=FALSE,
-               data=filter(DecesFM,DecesFM$Annee>=2014 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
+               data=filter(DecesFM,DecesFM$Annee>=2016 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
                show.legend = FALSE)   +
    geom_smooth(aes(group=1),
                method="lm",
@@ -352,13 +407,13 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
                data=filter(DecesFM,DecesFM$Annee>=2010 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
                show.legend = FALSE)   +
    theme_minimal() +
-   theme(plot.title = element_text(size = 16, face = "bold"),
+   theme(plot.title = element_text(size = 14, face = "bold"),
          plot.subtitle = element_text(size = 9)) +
    scale_x_discrete(breaks = c("01/01","02/01","03/01","04/01","05/01","06/01","07/01","08/01","09/01","10/01","11/01","12/01"),
                     labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
    labs(y=NULL, x= NULL,
         title = "Décès quotidiens en 2020 et 2021 en France métropolitaine",
-        subtitle = "En noir, la tendance calculée de 2014 à 2019 et en pointillé, la tendance décennale. Moyenne mobile sur 7 jours.",
+        subtitle = "En noir, la tendance 2016–2019 et en pointillé, la tendance décennale 2010–2019. Moyenne mobile sur 7 jours.",
         caption = " Source : Insee, fichier des décès individuels. Calculs : @paldama.")
 ggsave("gTimeSeriesTransversal.png",plot=gTimeSeriesTransversal, height = 4 , width =8)
 
