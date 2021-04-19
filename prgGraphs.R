@@ -290,13 +290,13 @@ ggsave("gClasseAgeSexe.png",plot=gClasseAgeSexe, height = 10 , width = 1.2*10)
 
 gTimeSeriesClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe) +
    geom_ma(aes(x=Date, y=DECES), ma_fun = SMA,n=7 ,size = 0.6,color="blue", linetype="solid") +
-   stat_smooth(data=subset(db1820ClasseAgeSexe,Annee<2020),
-               aes(x=Date, y=DECES),
-               method="glm",
-               method.args = list(family = "poisson"(link="log")),
-               formula = y~x+cos(2*x*pi/365.25)+sin(2*x*pi/365.25),
-               size = 0.6,
-               color="black") +
+   # stat_smooth(data=subset(db1820ClasseAgeSexe,Annee<2020),
+   #             aes(x=Date, y=DECES),
+   #             method="glm",
+   #             method.args = list(family = "poisson"(link="log")),
+   #             formula = y~x+cos(2*x*pi/365.25)+sin(2*x*pi/365.25),
+   #             size = 0.6,
+   #             color="black") +
    scale_color_brewer("Annee", palette = "Set2")+
    facet_grid(ClasseAge~SEXE,scales = "free") +
    theme_minimal() +
