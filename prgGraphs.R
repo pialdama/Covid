@@ -150,11 +150,11 @@ DecesFM$DECES<- DecesFM$DECES*DecesFM$coefredress
 ##############################################################################################
 
 gRepartitionAge<-ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) + 
-   geom_histogram(data=filter(db1820,db1820$ADEC==2018),
+   geom_histogram(data=filter(db1820,db1820$ADEC==2020),
                   aes(x=age),
                   binwidth = 1,
                   size=1.2)+
-   geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020),
+   geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020 & db1820$ADEC!=2021),
                  aes(y = after_stat(count) / (n_distinct(db1820$ADEC)-1),linetype=SEXE, group=SEXE),
                  position = "stack",
                  binwidth = 1,
@@ -240,28 +240,6 @@ db1820ClasseAge<-db1820 %>%
    group_by(Date,Annee,JourMois,ClasseAge) %>%
    summarise(DECES=n())
 
-# gClasseAge<-ggplot(data=db1820ClasseAge,aes(x=JourMois, y=DECES)) +
-#    geom_line(aes(color = Annee, group = Annee),size = 0.6) +
-#    scale_colour_manual(values = c("darkgray", "lightgray", "blue","red")) +
-#    stat_smooth(data=subset(db1820ClasseAge,Annee<2020),
-#                aes(x=JourMois, y=DECES, group=ClasseAge),
-#                method="glm",
-#                formula = y~splines::bs(x,6),
-#                size = 0.6,
-#                color="black") +
-#    facet_grid(ClasseAge~.,scales = "free") +
-#    theme_minimal() +
-#    scale_x_discrete("Date",
-#                     breaks = c("01/01","02/01","03/01","04/01","05/01","06/01","07/01","08/01","09/01","10/01","11/01","12/01"),
-#                     labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
-#    labs( y = "Effectifs",
-#          title = "Décès quotidiens par classes d'âge, de 2018 à 2021",
-#          subtitle = "Tendance 2018-2019 en noir. France métropolitaine.",
-#          caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-# ggsave("gClasseAge.png", plot=gClasseAge, height = 10 , width = 1.2*10)
-
-
-# le package tidyquant et le geom_ma : lissage sur 7 jours 
 gClasseAge<-ggplot(data=db1820ClasseAge,aes(x=JourMois, y=DECES)) +
    geom_ma(aes(color = Annee, group = Annee), ma_fun = SMA, n = 7,size = 0.6,linetype = "solid") +
    scale_colour_manual(values = c("darkgray", "lightgray", "blue","red")) +
@@ -289,26 +267,6 @@ db1820ClasseAgeSexe<-db1820 %>%
    group_by(Date,JourMois,Annee,ClasseAge,SEXE) %>%
    summarise(DECES=n())
 
-# gClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
-#    geom_line(aes(color = Annee, group = Annee),size = 0.6) +
-#    scale_colour_manual(values = c("darkgray", "lightgray", "blue","red"))  +
-#    stat_smooth(data=subset(db1820ClasseAgeSexe,Annee<2020),
-#                aes(x=JourMois, y=DECES, group = ClasseAge),
-#                method="glm",
-#                formula = y~splines::bs(x,6),
-#                size = 0.6,
-#                color="black") +
-#    facet_grid(ClasseAge~SEXE,scales = "free") +
-#    theme_minimal() +
-#    scale_x_discrete("Date",
-#                     breaks = c("01/01","02/01","03/01","04/01","05/01","06/01","07/01","08/01","09/01","10/01","11/01","12/01"),
-#                     labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
-#    labs( y = "Effectifs",
-#          title = "Décès quotidiens par classes d'âge et selon le sexe, de 2018 à 2021",
-#          subtitle = "Tendance 2018-2019 en noir. France métropolitaine.",
-#          caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-# ggsave("gClasseAgeSexe.png",plot=gClasseAgeSexe, height = 10 , width = 1.2*10)
-
 gClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
    geom_ma(aes(color = Annee, group = Annee), ma_fun = SMA, n = 7,size = 0.6,linetype = "solid") +
    scale_colour_manual(values = c("darkgray", "lightgray", "blue","red"))  +
@@ -331,26 +289,6 @@ gClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
          caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
 ggsave("gClasseAgeSexe.png",plot=gClasseAgeSexe, height = 10 , width = 1.2*10)
 
-# 
-# gTimeSeriesClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe) +
-#    geom_line(aes(x=Date, y=DECES),size = 0.6,color="blue") +
-#    stat_smooth(data=subset(db1820ClasseAgeSexe,Annee<2020),
-#                aes(x=Date, y=DECES),
-#                method="glm",
-#                method.args = list(family = "poisson"(link="log")),
-#                formula = y~x+cos(2*x*pi/365.25)+sin(2*x*pi/365.25),
-#                size = 0.6,
-#                color="black") +
-#    scale_color_brewer("Annee", palette = "Set2")+
-#    facet_grid(ClasseAge~SEXE,scales = "free") +
-#    theme_minimal() +
-#    labs( y = "Effectifs",
-#          title = "Décès quotidiens par classes d'âge, de 2018 à 2021",
-#          subtitle = "Tendance 2018-2019 en noir. France métropolitaine.",
-#          caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-# ggsave("gTimeSeriesClasseAgeSexe.png",plot=gTimeSeriesClasseAgeSexe, height = 10 , width = 1.2*10)
-
-
 gTimeSeriesClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe) +
    geom_ma(aes(x=Date, y=DECES), ma_fun = SMA,n=7 ,size = 0.6,color="blue", linetype="solid") +
    # stat_smooth(data=subset(db1820ClasseAgeSexe,Annee<2020),
@@ -372,8 +310,6 @@ gTimeSeriesClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe) +
 ggsave("gTimeSeriesClasseAgeSexe.png",plot=gTimeSeriesClasseAgeSexe, height = 10 , width = 1.2*10)
 
 
-
-
 ############################################################################################################
 ############################################################################################################
 # Graphique simple : comparaison à la tendance 2014/2019 
@@ -386,15 +322,16 @@ DecesFM$JourMoisBis<-format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%b %d")
 DecesFM$Annee<-format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%Y")
 
 gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=JourMois, y=DECES)) +
-   geom_ma(data=filter(DecesFM,DecesFM$Annee>=2000 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
+      geom_ma(data=filter(DecesFM,DecesFM$Annee>=2000 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
            aes(group=Annee),
            ma_fun = SMA, 
            n = 7,
            linetype = "solid",
-           color="gray",size=0.2) +
+           color="gray",
+           size=0.2) +
    geom_ma(data=filter(DecesFM,DecesFM$Annee>=2020),
            aes(color = Annee, group = Annee),
-           ma_fun = SMA, 
+           ma_fun = SMA,
            n = 7,
            linetype = "solid",
            size = 1) +
@@ -420,8 +357,9 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
    scale_x_discrete(breaks = c("01/01","02/01","03/01","04/01","05/01","06/01","07/01","08/01","09/01","10/01","11/01","12/01"),
                     labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
    labs(y=NULL, x= NULL,
+        colour= "Année",
         title = "Décès quotidiens en 2020 et 2021 en France métropolitaine",
-        subtitle = "En noir, la tendance 2016–2019 et en pointillé, la tendance décennale 2010–2019. Moyenne mobile sur 7 jours.",
+        subtitle = "En noir, la tendance 2016–2019 et en pointillé, la tendance décennale 2010–2019. Moyenne mobile 7 jours.",
         caption = " Source : Insee, fichier des décès individuels. Calculs : @paldama.")
 ggsave("gTimeSeriesTransversal.png",plot=gTimeSeriesTransversal, height = 4 , width =8)
 
