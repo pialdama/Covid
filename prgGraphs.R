@@ -118,9 +118,13 @@ rm(DecesFE2021,DecesFM2021)
 
 DecesFE$Annee<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%Y"))
 DecesFE$Mois<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%m"))
+DecesFE$MoisJour<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%m/%d"))
+
 
 DecesFM$Annee<-as.character(format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%Y"))
 DecesFM$Mois<-as.character(format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%m"))
+DecesFM$MoisJour<-as.character(format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%m/%d"))
+
 
 # Redressement
 # crée la variable de distance
@@ -164,7 +168,7 @@ gRepartitionAge<-ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) +
          plot.subtitle = element_text(size = 9)) +
    labs(x = "Age",
      y = "Nombre de décès par âge",
-     title = "Répartition des décès par âge et par sexe en 2018",
+     title = "Répartition des décès par âge et par sexe en 2020",
      subtitle = "En noir, la moyenne 2018-2019 du nombre de décès par âge et par sexe.",
      caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
 ggsave("gRepartitionAge.png", plot=gRepartitionAge, height = 5 , width = 12)
@@ -393,15 +397,15 @@ DecesFM$se<-sqrt(phiPoisson*DecesFM$DecesAttendus)
 # Plot les données en time series
 gTimeSeriesPoisson<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2014)) +
    geom_ribbon(aes(x=Date, ymin = DecesAttendus - 1.96*se, ymax = DecesAttendus + 1.96*se), fill = "blue", alpha=0.1) +
-   geom_ma(aes(x=Date, y=DECES),ma_fun=SMA,n=7, size=0.5, linetype = "solid", color = "black") +
-   geom_line(aes(x=Date, y=DecesAttendus),colour="blue",size=1) +
+   geom_ma(aes(x=Date, y=DECES), ma_fun = SMA, n = 7, size=0.5, linetype = "solid", color = "black") +
+   geom_line(aes(x=Date, y=DecesAttendus),colour="blue",size=0.5) +
    theme_minimal() +
-   theme(plot.title = element_text(size = 16, face = "bold"),
+   theme(plot.title = element_text(size = 14, face = "bold"),
          plot.subtitle = element_text(size = 9)) +
    labs(x = NULL,
         y = NULL,
         title = "Décès quotidiens de 2014 à 2021 en France métropolitaine",
         subtitle = "En bleu, la tendance estimée de 2014 à 2019, par un modèle Quasi-Poisson. Moyenne glissante sur 7 jours.",
         caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, height = 5 , width =12)
-
+ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, height = 4, width =14)
+print(gTimeSeriesPoisson)
