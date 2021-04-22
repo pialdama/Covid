@@ -355,6 +355,7 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
                se=FALSE,
                data=filter(DecesFM,DecesFM$Annee>=2010 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
                show.legend = FALSE)   +
+   ylim(500,3000) +
    theme_minimal() +
    theme(plot.title = element_text(size = 14, face = "bold"),
          plot.subtitle = element_text(size = 9)) +
@@ -366,6 +367,57 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
         subtitle = "En noir, la tendance 2016–2019 et en pointillé, la tendance décennale 2010–2019. Moyenne mobile 7 jours.",
         caption = " Source : Insee, fichier des décès individuels. Calculs : @paldama.")
 ggsave("gTimeSeriesTransversal.png",plot=gTimeSeriesTransversal, height = 4 , width =8)
+
+
+# Graphique depuis 1968
+
+# Détrending de la série de décès
+DecesFM$t<-c(1:nrow(DecesFM))
+DecesFM$cose<-cos(2*pi*DecesFM$t/365.25)
+DecesFM$sine<-sin(2*pi*DecesFM$t/365.25)
+ModelOLS<-lm(
+   I(log(DECES)) ~ t + I(t^2) + I(t^3)  + cose + sine ,
+   data = filter(DecesFM, DecesFM$Annee < 2020))
+summary(ModelOLS)
+DecesFM$Fit<-exp(predict.lm(object = ModelOLS,
+                        newdata = DecesFM,
+                        type = "response" ))
+DecesFM$ExcesDeces<-(DecesFM$DECES/DecesFM$Fit-1)*100
+DecesFM$ExcesDecesAbs<-(DecesFM$DECES-DecesFM$Fit)
+qplot(DecesFM$Date,DecesFM$ExcesDeces) + geom_line() 
+
+gTimeSeriesLongTerme<-ggplot(data=filter(DecesFM,DecesFM$Annee>=1968),aes(x=JourMois, y=ExcesDeces)) +
+   geom_line(data=filter(DecesFM, DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
+           aes(group=Annee),
+           linetype = "solid",
+           color="gray",
+           size=0.2) +
+   geom_line(data=filter(DecesFM, DecesFM$Annee>=1969 & DecesFM$Annee<=1970),
+             aes(color = Annee, group = Annee),
+             linetype = "solid",
+             size = 0.5) +
+   geom_line(data=filter(DecesFM, DecesFM$Annee==2003),
+             aes(color = Annee, group = Annee),
+             linetype = "solid",
+             size = 0.5) +
+   geom_line(data=filter(DecesFM, DecesFM$Annee>=2020 ),
+           aes(color = Annee, group = Annee),
+           linetype = "solid",
+           size = 0.7) +
+   scale_colour_manual(values = c("brown","orange2","green2","blue","red"))  +
+   theme_minimal() +
+   theme(plot.title = element_text(size = 12, face = "bold"),
+         plot.subtitle = element_text(size = 8)) +
+   scale_x_discrete(breaks = c("01/01","02/01","03/01","04/01","05/01","06/01","07/01","08/01","09/01","10/01","11/01","12/01"),
+                    labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
+   #coord_polar("x") +
+   labs(y=NULL, x= NULL,
+        colour= "Année",
+        title = "Excès de mortalité en France métropolitaine depuis 1968",
+        subtitle = "En pourcentage de la mortalité attendue calculée à partir d'une régression linéaire avec tendance polynomiale et composante cyclique",
+        caption = " Source : Insee, fichier des décès individuels. Calculs : @paldama")
+ggsave("gTimeSeriesLongTerme.png",plot=gTimeSeriesLongTerme, height = 4 , width =8)
+
 
 
 ############################################################################################################
