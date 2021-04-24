@@ -329,14 +329,14 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
       geom_ma(data=filter(DecesFM,DecesFM$Annee>=2000 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
            aes(group=Annee),
            ma_fun = SMA, 
-           n = 7,
+           n = 1,
            linetype = "solid",
            color="gray",
            size=0.2) +
    geom_ma(data=filter(DecesFM,DecesFM$Annee>=2020),
            aes(color = Annee, group = Annee),
            ma_fun = SMA,
-           n = 7,
+           n = 1,
            linetype = "solid",
            size = 1) +
    scale_colour_manual(values = c("blue","red"))  +
@@ -355,7 +355,6 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
                se=FALSE,
                data=filter(DecesFM,DecesFM$Annee>=2010 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
                show.legend = FALSE)   +
-   ylim(500,3000) +
    theme_minimal() +
    theme(plot.title = element_text(size = 14, face = "bold"),
          plot.subtitle = element_text(size = 9)) +
@@ -364,7 +363,7 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
    labs(y=NULL, x= NULL,
         colour= "Année",
         title = "Décès quotidiens en 2020 et 2021 en France métropolitaine",
-        subtitle = "En noir, la tendance 2016–2019 et en pointillé, la tendance décennale 2010–2019. Moyenne mobile 7 jours.",
+        subtitle = "En noir, la tendance 2016–2019 et en pointillé, la tendance décennale 2010–2019.",
         caption = " Source : Insee, fichier des décès individuels. Calculs : @paldama.")
 ggsave("gTimeSeriesTransversal.png",plot=gTimeSeriesTransversal, height = 4 , width =8)
 
