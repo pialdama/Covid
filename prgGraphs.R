@@ -147,6 +147,7 @@ DecesFE$DECES<- DecesFE$DECES*DecesFE$coefredress
 DecesFM$DECES<- DecesFM$DECES*DecesFM$coefredress 
 
 
+
 ##############################################################################################
 ##############################################################################################
 # Graphiques de répartition
@@ -326,35 +327,54 @@ DecesFM$JourMoisBis<-format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%b %d")
 DecesFM$Annee<-format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%Y")
 
 gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=JourMois, y=DECES)) +
-      geom_ma(data=filter(DecesFM,DecesFM$Annee>=2000 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
+   # geom_ribbon(data=filter(DecesFM,DecesFM$Annee>=2000 & DecesFM$Annee!=2003  & DecesFM$Annee!=2020 & DecesFM$Annee!=2021 ),
+   #             aes(ymin = min(DECES), ymax = max(DECES)), 
+   #             alpha=.5, fill="gray") +
+   geom_line(data=filter(DecesFM,DecesFM$Annee>=2000 & DecesFM$Annee!=2003  & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
            aes(group=Annee),
-           ma_fun = SMA, 
-           n = 1,
            linetype = "solid",
            color="gray",
            size=0.2) +
-   geom_ma(data=filter(DecesFM,DecesFM$Annee>=2020),
+   geom_line(data=filter(DecesFM,DecesFM$Annee==2003),
+             aes(color=Annee,group = Annee),
+             linetype = "solid",
+             size=0.5) +
+   geom_line(data=filter(DecesFM,DecesFM$Annee>=2020),
            aes(color = Annee, group = Annee),
-           ma_fun = SMA,
-           n = 1,
            linetype = "solid",
            size = 1) +
-   scale_colour_manual(values = c("blue","red"))  +
-   geom_smooth(aes(group=1),
-               method="lm",
-               formula = y ~ splines::bs(x,6),
-               color="black",
-               se=FALSE,
-               data=filter(DecesFM,DecesFM$Annee>=2016 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
-               show.legend = FALSE)   +
-   geom_smooth(aes(group=1),
-               method="lm",
-               formula = y ~ splines::bs(x,6),
-               color="black",
-               linetype = "dashed",
-               se=FALSE,
-               data=filter(DecesFM,DecesFM$Annee>=2010 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
-               show.legend = FALSE)   +
+   scale_colour_manual(values = c("orange","blue","red"))  +
+   stat_summary(data=filter(DecesFM,DecesFM$Annee>=2016 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
+                aes(y = DECES,group=1), 
+                fun=mean, colour="black", 
+                geom="line",
+                group=1) +
+   # stat_summary(data=filter(DecesFM,DecesFM$Annee>=2010 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
+   #              aes(y = DECES,group=1), 
+   #              fun=mean, colour="black", 
+   #              geom="line",
+   #              linetype="dashed",
+   #              group=1) +
+   # geom_smooth(aes(group=1),
+   #             method="lm",
+   #             formula = y ~ splines::bs(x,6),
+   #             color="black",
+   #             se=FALSE,
+   #             data=filter(DecesFM,DecesFM$Annee>=2016 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
+   #             show.legend = FALSE)   +
+   # geom_smooth(aes(group=1),
+   #             method="lm",
+   #             formula = y ~ splines::bs(x,6),
+   #             color="black",
+   #             linetype = "dashed",
+   #             se=FALSE,
+   #             data=filter(DecesFM,DecesFM$Annee>=2010 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
+   #             show.legend = FALSE)   +
+   coord_polar() +
+   scale_y_continuous(limits = c(0,3655),
+                      breaks = c(0,500,1000,1500,2000,2500),
+                      minor_breaks = NULL,
+                      expand=expansion(add=c(0,-1000)))+
    theme_minimal() +
    theme(plot.title = element_text(size = 14, face = "bold"),
          plot.subtitle = element_text(size = 9)) +
@@ -362,10 +382,10 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
                     labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
    labs(y=NULL, x= NULL,
         colour= "Année",
-        title = "Décès quotidiens en 2020 et 2021 en France métropolitaine",
-        subtitle = "En noir, la tendance 2016–2019 et en pointillé, la tendance décennale 2010–2019.",
-        caption = " Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gTimeSeriesTransversal.png",plot=gTimeSeriesTransversal, height = 4 , width =8)
+        title = "Décès quotidiens depuis 2000 en France métropolitaine",
+        subtitle = "En noir, la moyenne 2016–2019.",
+        caption = " Source : Insee, fichier des décès individuels. Graphique : @paldama.")
+ggsave("gTimeSeriesTransversal.png",plot=gTimeSeriesTransversal, height = 7 , width = 7)
 
 
 # Graphique depuis 1968
@@ -404,16 +424,17 @@ gTimeSeriesLongTerme<-ggplot(data=filter(DecesFM,DecesFM$Annee>=1968),aes(x=Jour
            linetype = "solid",
            size = 0.7) +
    scale_colour_manual(values = c("brown","orange2","green2","blue","red"))  +
+    geom_hline(yintercept = 0) +
    theme_minimal() +
    theme(plot.title = element_text(size = 12, face = "bold"),
-         plot.subtitle = element_text(size = 8)) +
+         plot.subtitle = element_text(size = 7)) +
    scale_x_discrete(breaks = c("01/01","02/01","03/01","04/01","05/01","06/01","07/01","08/01","09/01","10/01","11/01","12/01"),
                     labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
    #coord_polar("x") +
    labs(y=NULL, x= NULL,
         colour= "Année",
         title = "Excès de mortalité en France métropolitaine depuis 1968",
-        subtitle = "En pourcentage de la mortalité attendue calculée à partir d'une régression linéaire avec tendance polynomiale et composante cyclique",
+        subtitle = "En pourcentage de la mortalité attendue, calculée à partir d'une régression linéaire avec tendance polynomiale et composante cyclique.",
         caption = " Source : Insee, fichier des décès individuels. Calculs : @paldama")
 ggsave("gTimeSeriesLongTerme.png",plot=gTimeSeriesLongTerme, height = 4 , width =8)
 
@@ -460,3 +481,57 @@ gTimeSeriesPoisson<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2014)) +
         caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
 ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, height = 4, width =14)
 print(gTimeSeriesPoisson)
+
+##############################################################################################
+##############################################################################################
+# Aggregation hebdo
+##############################################################################################
+##############################################################################################
+
+library(ISOweek)
+
+# Importation des données de surveillance épidémique (Grippe, réseau Sentinelles)
+Sentinelles<-read.csv(dest,skip = 1)
+Sentinelles$week<-as.character(Sentinelles$week-1)
+Sentinelles$week<-as.character(
+   paste(
+      substr(Sentinelles$week,1,4),
+      substr(Sentinelles$week,5,6),
+      "7",
+      sep="-")
+)
+Sentinelles$Date<-date2ISOweek(as.Date(Sentinelles$week,"%Y-%U-%u"))
+Sentinelles %>% arrange(week) %>% view(Sentinelles)
+
+
+# Aggregation hebdo de la série de décès quotidiens
+DecesFMhebdo<-DecesFM %>%
+   tq_transmute(select     = DECES,
+                mutate_fun = apply.weekly,
+                FUN        = sum)
+DecesFMhebdo$Date<-date2ISOweek(DecesFMhebdo$Date)
+DecesFMhebdo$DECES[DecesFMhebdo$Date=="2021-W16-1"]<-DecesFMhebdo$DECES[DecesFMhebdo$Date=="2021-W16-1"]*7
+DecesFMhebdo$DECES<-round(DecesFMhebdo$DECES)
+
+# Merge des datasets
+dbMerge<-left_join(DecesFMhebdo,Sentinelles,by = "Date")
+dbMergeNAs <- dbMerge[rowSums(is.na(dbMerge)) > 0,]
+dbMerge<-drop_na(dbMerge)
+
+
+# Plot les données en time series
+ggplot(data=filter(DecesFMhebdo)) +
+   #geom_ribbon(aes(x=Date, ymin = DecesAttendus - 1.96*se, ymax = DecesAttendus + 1.96*se), fill = "blue", alpha=0.1) +
+   #geom_ma(aes(x=Date, y=DECES), ma_fun = SMA, n = 7, size=0.5, linetype = "solid", color = "black") +
+   geom_line(aes(x=Date, y=DECES),colour="blue",size=0.5) +
+   theme_minimal() +
+   theme(plot.title = element_text(size = 14, face = "bold"),
+         plot.subtitle = element_text(size = 9)) +
+   labs(x = NULL,
+        y = NULL,
+        title = "Décès hebdomadaires en France métropolitaine",
+        subtitle = "",
+        caption = "")
+
+      
+      
