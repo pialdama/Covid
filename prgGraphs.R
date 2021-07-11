@@ -536,7 +536,7 @@ dbMerge$cose<-cos(2*pi*dbMerge$t/52)
 dbMerge$sine<-sin(2*pi*dbMerge$t/52)
 ModelPoissonBis<-glm( 
   DECES ~ t + cose + sine + inc100:Annee,
-  data = filter(dbMerge,dbMerge$Annee>=2014 & dbMerge$Annee<2019),
+  data = filter(dbMerge,dbMerge$Annee>=2014 & dbMerge$Annee=<2019),
   family = quasipoisson(link="log"),
   control = list(maxit = 500))
 
