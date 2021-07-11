@@ -3,7 +3,10 @@ library(dplyr)
 library(ggplot2)
 library(frequency)
 library(tidyquant)  
+library(ggpubr)
+library(ISOweek)
 
+setwd("~/Documents/Covid")
 
 ##############################################################################################
 ##############################################################################################
@@ -154,7 +157,36 @@ DecesFM$DECES<- DecesFM$DECES*DecesFM$coefredress
 ##############################################################################################
 ##############################################################################################
 
-gRepartitionAge<-ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+gRepartitionAge2018<-print(ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+  geom_histogram(data=filter(db1820,db1820$ADEC==2018),
+                 aes(x=age),
+                 binwidth = 1,
+                 size=1.2)+
+  geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020 & db1820$ADEC!=2021),
+                aes(y = after_stat(count) / (n_distinct(db1820$ADEC)-1),linetype=SEXE, group=SEXE),
+                position = "stack",
+                binwidth = 1,
+                size=0.5)+
+  theme_minimal() +
+    theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
+  labs(title = "En 2018 et moyenne 2018-2019 en noir"))
+
+
+gRepartitionAge2019<-print(ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+  geom_histogram(data=filter(db1820,db1820$ADEC==2019),
+                 aes(x=age),
+                 binwidth = 1,
+                 size=1.2)+
+  geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020 & db1820$ADEC!=2021),
+                aes(y = after_stat(count) / (n_distinct(db1820$ADEC)-1),linetype=SEXE, group=SEXE),
+                position = "stack",
+                binwidth = 1,
+                size=0.5)+
+  theme_minimal() +
+    theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
+  labs(title = "En 2019 et moyenne 2018-2019 en noir"))
+
+gRepartitionAge2020<-print(ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) + 
    geom_histogram(data=filter(db1820,db1820$ADEC==2020),
                   aes(x=age),
                   binwidth = 1,
@@ -165,14 +197,21 @@ gRepartitionAge<-ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) +
                  binwidth = 1,
                  size=0.5)+
    theme_minimal() +
-   theme(plot.title = element_text(size = 14, face = "bold"),
-         plot.subtitle = element_text(size = 9)) +
-   labs(x = "Age",
-     y = "Nombre de décès par âge",
-     title = "Répartition des décès par âge et par sexe en 2020",
-     subtitle = "En noir, la moyenne 2018-2019 du nombre de décès par âge et par sexe.",
-     caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gRepartitionAge.png", plot=gRepartitionAge, height = 5 , width = 12)
+   theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
+     labs(title = "En 2020 et moyenne 2018-2019 en noir"))
+
+figRepartitionAge<-ggarrange(gRepartitionAge2018, gRepartitionAge2019, gRepartitionAge2020 + rremove("x.text") + font("x.text", size = 10),
+                             common.legend = TRUE, legend="bottom", ncol = 1, nrow = 3) %>%
+  annotate_figure(figRepartitionAge,
+                top = text_grob("Répartition des décès par âge et selon le sexe en France",
+                                hjust = 0.7,
+                                vjust = 0.5,
+                                face = "bold", 
+                                size = 14),
+                bottom = text_grob("Source: Insee, état civil, fichiers des décès individuels. Graphique : P. Aldama @paldama.",
+                                   hjust = 1, x = 1, face = "italic", size = 10),
+                left = text_grob("Nombre de décès par âge", color = "black", rot = 90) )
+ggsave("gFigRepartitionAgeSexe.png", plot=figRepartitionAge, height = 10, width = 8)
 
 
 gRepartitionAgeSexe<-ggplot(data=db1820,aes(x=age,after_stat(count))) +  
@@ -218,6 +257,8 @@ gRepartitionAgeSexeMois<-ggplot(data=db1820,aes(x=age,after_stat(count))) +
 ggsave("gRepartitionAgeSexeMois.png", plot=gRepartitionAgeSexeMois, height = 12 , width = 10)
 
 
+
+
 ############################################################################################################
 ############################################################################################################
 # Graphiques en times series pour 2018-2021 par classe d'âge
@@ -252,6 +293,7 @@ gClasseAge<-ggplot(data=db1820ClasseAge,aes(x=JourMois, y=DECES)) +
                aes(x=JourMois, y=DECES, group=ClasseAge),
                method="glm",
                formula = y~splines::bs(x,6),
+               se=FALSE,
                size = 0.6,
                color="black") +
    facet_grid(ClasseAge~.,scales = "free") +
@@ -275,10 +317,16 @@ db1820ClasseAgeSexe<-db1820 %>%
 gClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
    geom_ma(aes(color = Annee, group = Annee), ma_fun = SMA, n = 7,size = 0.6,linetype = "solid") +
    scale_colour_manual(values = c("darkgray", "lightgray", "blue","red"))  +
+   # stat_summary(data=subset(db1820ClasseAgeSexe,Annee<2020),
+   #              aes(x=JourMois, y=DECES, group = ClasseAge), 
+   #              fun=mean, colour="black", 
+   #              geom="line",
+   #              group=1) +
    stat_smooth(data=subset(db1820ClasseAgeSexe,Annee<2020),
                aes(x=JourMois, y=DECES, group = ClasseAge),
                method="glm",
                formula = y~splines::bs(x,6),
+               se=FALSE,
                size = 0.6,
                color="black") +
    facet_grid(ClasseAge~SEXE,scales = "free") +
@@ -379,12 +427,12 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
    theme(plot.title = element_text(size = 14, face = "bold"),
          plot.subtitle = element_text(size = 9)) +
    scale_x_discrete(breaks = c("01/01","02/01","03/01","04/01","05/01","06/01","07/01","08/01","09/01","10/01","11/01","12/01"),
-                    labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc")) +
+                    labels = c("Jan","Fév","Mar","Avr","Mai","Jui","Jul","Aoû","Sep","Oct","Nov","Déc"),na.translate = FALSE) +
    labs(y=NULL, x= NULL,
         colour= "Année",
         title = "Décès quotidiens depuis 2000 en France métropolitaine",
         subtitle = "En noir, la moyenne 2016–2019.",
-        caption = " Source : Insee, fichier des décès individuels. Graphique : @paldama.")
+        caption = " Source : Insee, fichier des décès individuels. Graphique : @paldama, inspiré de B. Coulmont.")
 ggsave("gTimeSeriesTransversal.png",plot=gTimeSeriesTransversal, height = 7 , width = 7)
 
 
@@ -439,99 +487,96 @@ gTimeSeriesLongTerme<-ggplot(data=filter(DecesFM,DecesFM$Annee>=1968),aes(x=Jour
 ggsave("gTimeSeriesLongTerme.png",plot=gTimeSeriesLongTerme, height = 4 , width =8)
 
 
-
-############################################################################################################
-############################################################################################################
-# Reproduction graphiques avec décès attendus en fonction d'une quasi-Poisson
-############################################################################################################
-############################################################################################################
-
-# Estime le modèle quasi-Poisson de 2014 à 2019
-DecesFM$t<-c(1:nrow(DecesFM))
-DecesFM$cose<-cos(2*pi*DecesFM$t/365.25)
-DecesFM$sine<-sin(2*pi*DecesFM$t/365.25)
-ModelPoisson<-glm( 
-   DECES ~ t  + cose + sine ,
-   data = filter(DecesFM,DecesFM$Annee>=2014 & DecesFM$Annee < 2020),
-   family = quasipoisson(link="log"))
-summary(ModelPoisson)
-pseudoR2<- 1-(ModelPoisson$deviance/ModelPoisson$null.deviance)
-pseudoR2
-phiPoisson<-summary(ModelPoisson)$deviance / summary(ModelPoisson)$df.residual
-
-# Prediction et écart-type ajusté de la surdispersion
-DecesFM$DecesAttendus<-predict.glm(object=ModelPoisson,
-                                   newdata=DecesFM,
-                                   type="response" )
-DecesFM$se<-sqrt(phiPoisson*DecesFM$DecesAttendus)
-
-
-# Plot les données en time series
-gTimeSeriesPoisson<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2014)) +
-   geom_ribbon(aes(x=Date, ymin = DecesAttendus - 1.96*se, ymax = DecesAttendus + 1.96*se), fill = "blue", alpha=0.1) +
-   geom_ma(aes(x=Date, y=DECES), ma_fun = SMA, n = 7, size=0.5, linetype = "solid", color = "black") +
-   geom_line(aes(x=Date, y=DecesAttendus),colour="blue",size=0.5) +
-   theme_minimal() +
-   theme(plot.title = element_text(size = 14, face = "bold"),
-         plot.subtitle = element_text(size = 9)) +
-   labs(x = NULL,
-        y = NULL,
-        title = "Décès quotidiens de 2014 à 2021 en France métropolitaine",
-        subtitle = "En bleu, la tendance estimée de 2014 à 2019, par un modèle Quasi-Poisson. Moyenne glissante sur 7 jours.",
-        caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, height = 4, width =14)
-print(gTimeSeriesPoisson)
-
 ##############################################################################################
 ##############################################################################################
-# Aggregation hebdo
+# Aggregation hebdo et estimation de la tendance hors-épidémie
 ##############################################################################################
 ##############################################################################################
-
-library(ISOweek)
 
 # Importation des données de surveillance épidémique (Grippe, réseau Sentinelles)
-Sentinelles<-read.csv(dest,skip = 1)
-Sentinelles$week<-as.character(Sentinelles$week-1)
-Sentinelles$week<-as.character(
+Sentinelles<-read.csv("~/Documents/covid/SentinellesIncidenceGrippe.csv",skip = 1)
+Sentinelles$weekTemp<-as.character(Sentinelles$week-1)
+Sentinelles$weekTemp<-as.character(
    paste(
       substr(Sentinelles$week,1,4),
-      substr(Sentinelles$week,5,6),
+      paste("W",substr(Sentinelles$week,5,6),sep=""),
       "7",
       sep="-")
 )
-Sentinelles$Date<-date2ISOweek(as.Date(Sentinelles$week,"%Y-%U-%u"))
-Sentinelles %>% arrange(week) %>% view(Sentinelles)
+Sentinelles$iso.date <- ISOweek2date(Sentinelles$weekTemp)
+Sentinelles$ISO.week <- date2ISOweek(Sentinelles$iso.date)
+Sentinelles <- Sentinelles %>%
+  arrange(ISO.week)
+view(Sentinelles)
+
+SentinellesMerge<-Sentinelles%>%
+  select(ISO.week,inc100)
 
 
 # Aggregation hebdo de la série de décès quotidiens
-DecesFMhebdo<-DecesFM %>%
+DecesFEhebdo<-DecesFE %>%
    tq_transmute(select     = DECES,
                 mutate_fun = apply.weekly,
-                FUN        = sum)
-DecesFMhebdo$Date<-date2ISOweek(DecesFMhebdo$Date)
-DecesFMhebdo$DECES[DecesFMhebdo$Date=="2021-W16-1"]<-DecesFMhebdo$DECES[DecesFMhebdo$Date=="2021-W16-1"]*7
-DecesFMhebdo$DECES<-round(DecesFMhebdo$DECES)
+                FUN        = mean)
+DecesFEhebdo$DECES<-DecesFEhebdo$DECES*7 #utilise la moyenne pour éviter le biais de semaine incomplète
+DecesFEhebdo$ISO.week<-date2ISOweek(DecesFEhebdo$Date)
+DecesFEhebdo$DECES<-round(DecesFEhebdo$DECES)
+
 
 # Merge des datasets
-dbMerge<-left_join(DecesFMhebdo,Sentinelles,by = "Date")
+dbMerge<-left_join(DecesFEhebdo,SentinellesMerge,by = "ISO.week")
 dbMergeNAs <- dbMerge[rowSums(is.na(dbMerge)) > 0,]
 dbMerge<-drop_na(dbMerge)
+dbMerge$Annee<-format(as.Date(dbMerge$Date, format="%d/%m/%Y"),"%Y")
+
+
+# Estime le modèle quasi-Poisson de 2014 à 2019
+dbMerge$t<-c(1:nrow(dbMerge))
+dbMerge$cose<-cos(2*pi*dbMerge$t/52)
+dbMerge$sine<-sin(2*pi*dbMerge$t/52)
+ModelPoissonBis<-glm( 
+  DECES ~ t + cose + sine + inc100:Annee,
+  data = filter(dbMerge,dbMerge$Annee>=2014 & dbMerge$Annee<2019),
+  family = quasipoisson(link="log"),
+  control = list(maxit = 500))
+
+summary(ModelPoissonBis)
+pseudoR2<- 1-(ModelPoissonBis$deviance/ModelPoissonBis$null.deviance)
+pseudoR2
+phiPoisson<-summary(ModelPoissonBis)$deviance / summary(ModelPoissonBis)$df.residual
+
+# Prediction et écart-type ajusté de la surdispersion
+# Sauvegarde les coefficients
+coefIntercept<-ModelPoissonBis$coefficients[[ 1 ]]
+coefTrend<-ModelPoissonBis$coefficients[[ 2 ]]
+coefCos<-ModelPoissonBis$coefficients[[ 3 ]] 
+coefSin<-ModelPoissonBis$coefficients[[ 4 ]] 
+dbMerge$DecesAttendus <- exp((coefIntercept + coefTrend*dbMerge$t + coefCos*dbMerge$cose + coefSin*dbMerge$sine))
+dbMerge$DecesAttendusSE <- sqrt(phiPoisson*dbMerge$DecesAttendus )
 
 
 # Plot les données en time series
-ggplot(data=filter(DecesFMhebdo)) +
-   #geom_ribbon(aes(x=Date, ymin = DecesAttendus - 1.96*se, ymax = DecesAttendus + 1.96*se), fill = "blue", alpha=0.1) +
-   #geom_ma(aes(x=Date, y=DECES), ma_fun = SMA, n = 7, size=0.5, linetype = "solid", color = "black") +
-   geom_line(aes(x=Date, y=DECES),colour="blue",size=0.5) +
-   theme_minimal() +
-   theme(plot.title = element_text(size = 14, face = "bold"),
-         plot.subtitle = element_text(size = 9)) +
-   labs(x = NULL,
+gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
+  geom_line(aes(x=Date, y=DECES, color = "obs"),size=0.5) +
+  geom_line(aes(x=Date, y=DecesAttendus, color = "fit"),size=1) +
+  scale_color_manual(name =" Nombre de décès ",
+                     labels = c("attendus","observés"),
+                     values = c("obs" = "black", "fit" = "blue"))+
+  geom_ribbon(aes(x=Date, 
+                  ymin = DecesAttendus - 1.96*DecesAttendusSE, 
+                  ymax = DecesAttendus + 1.96*DecesAttendusSE, 
+                  fill="Sur/sous-mortalité normale"), alpha=0.1) +
+  scale_fill_manual("",values="blue") +
+  theme_minimal() +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+         plot.subtitle = element_text(size = 12),
+        plot.caption = element_text(size = 10, face = "italic"),
+        legend.position = "top") +
+  labs(x = NULL,
         y = NULL,
-        title = "Décès hebdomadaires en France métropolitaine",
-        subtitle = "",
-        caption = "")
+        title = "Mortalité hebdomadaires en France",
+        subtitle = "Nombre de décès observés et attendus en absence d'épidémie (grippale ou Covid19)",
+        caption = "Sources : Insee, fichier des décès individuels et Réseau Sentinelles pour l'incidence de syndrômes grippaux. Calculs et erreurs : P. Aldama / @paldama")
 
-      
-      
+ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, height = 7, width =10)
+print(gTimeSeriesPoisson)

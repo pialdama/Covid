@@ -4,7 +4,7 @@ dest<-"~/Documents/Covid/HistoricalDataMortality.csv"
 data<-download.file(url, dest)
 
 # Insee data on mortality for 2020/2021
-url<-"https://www.insee.fr/fr/statistiques/fichier/4487988/2021-05-07_detail.zip"
+url<-"https://www.insee.fr/fr/statistiques/fichier/4487988/2021-07-02_detail.zip"
 dest<-"~/Documents/Covid/dataZ.zip"
 download.file(url, dest)
 unzip("~/Documents/Covid/dataZ.zip")
@@ -19,5 +19,7 @@ url<-"https://www.sentiweb.fr/datasets/incidence-PAY-3.csv"
 dest<-'~/Documents/covid/SentinellesIncidenceGrippe.csv'
 Sentinelles<-download.file(url, dest)
 
-
-
+# Data from SI-VIC 
+url <- "https://www.data.gouv.fr/fr/datasets/r/08c18e08-6780-452d-9b8c-ae244ad529b3"
+dest <- "~/Documents/covid/sivic_donneeshospit.csv"
+sivic<- download.file(url,dest)
