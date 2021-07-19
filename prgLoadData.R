@@ -1,3 +1,5 @@
+setwd("~/Documents/Covid")
+
 # Insee data on mortality 1968/2019
 url<-"https://www.insee.fr/fr/statistiques/fichier/4771989/T79JDEC.csv" 
 dest<-"~/Documents/Covid/HistoricalDataMortality.csv"
@@ -22,4 +24,9 @@ Sentinelles<-download.file(url, dest)
 # Data from SI-VIC 
 url <- "https://www.data.gouv.fr/fr/datasets/r/08c18e08-6780-452d-9b8c-ae244ad529b3"
 dest <- "~/Documents/covid/sivic_donneeshospit.csv"
+sivic<- download.file(url,dest)
+
+# Data from SI-DEP
+url <- "https://www.data.gouv.fr/fr/datasets/r/dd0de5d9-b5a5-4503-930a-7b08dc0adc7c"
+dest <- "~/Documents/covid/sidep_donneesincidence.csv"
 sivic<- download.file(url,dest)
