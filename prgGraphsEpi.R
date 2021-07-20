@@ -240,7 +240,7 @@ graph.rea<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
         plot.subtitle = element_text(size = 9)) +
   labs( y = "Effectis",
         x = NULL ,
-        title = "Nombre de personnes hospitalisées pour Covid19",
+        title = "Nombre de personnes en soins critiques pour Covid19",
         subtitle = "Répartition par classes d'âge",
         caption = "Source : Santé Publique France, SI-VIC. Graphique : P. Aldama @paldama.")
 print(graph.rea)
@@ -346,9 +346,9 @@ ggsave("gNdeces.png", plot=graph.Ndeces, height = 8 , width = 12)
 graph.Vaccins<-ggplot(data=filter(dbvaccin,
                                   dbvaccin$jour>DateDebutGraphique & dbvaccin$clage_vacsi!="Total" & dbvaccin$clage_vacsi!="0-4 ans"  & dbvaccin$clage_vacsi!="5-9 ans" & dbvaccin$clage_vacsi!="10-11 ans") )+
   geom_smooth(aes(y = couv_dose1 , x = jour, group = clage_vacsi, colour = clage_vacsi  ),
-              span = 0.1, size=.8,se = FALSE, linetype = "solid") +
-  geom_smooth(aes(y = couv_complet , x = jour, group = clage_vacsi, colour = clage_vacsi),
               span = 0.1, size=.6,se = FALSE, linetype = "dashed") +
+  geom_smooth(aes(y = couv_complet , x = jour, group = clage_vacsi, colour = clage_vacsi),
+              span = 0.1, size=.9,se = FALSE, linetype = "solid") +
   geom_hline(yintercept = 50, colour = "black", linetype = "dashed", size = 0.7)  +
   geom_hline(yintercept = 80, colour = "black", linetype = "solid", size = 0.7 )  +
   #facet_wrap(.~clage_vacsi)+
@@ -361,7 +361,7 @@ graph.Vaccins<-ggplot(data=filter(dbvaccin,
   labs( y = "En %",
         x = NULL ,
         title = "Taux de couverture vaccinale par classes d'âge",
-        subtitle = "Taux de primo-vaccinés (en trait continu) et de totalement vaccinés (en pointillés)",
+        subtitle = "Taux de primo-vaccinés (en trait pointillé) et de totalement vaccinés (en trait continu)",
         caption = "Source : Santé Publique France. Graphique : P. Aldama @paldama.")
 print(graph.Vaccins)
 ggsave("gVaccin.png", plot=graph.Vaccins, height = 8 , width = 12)
