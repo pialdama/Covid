@@ -200,7 +200,8 @@ gRepartitionAge2020<-print(ggplot(data=db1820,aes(x=age,y=after_stat(count),fill
    theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
      labs(title = "En 2020 et moyenne 2018-2019 en noir"))
 
-figRepartitionAge<-ggarrange(gRepartitionAge2018, gRepartitionAge2019, gRepartitionAge2020 + rremove("x.text") + font("x.text", size = 10),
+figRepartitionAge<-ggarrange(gRepartitionAge2018, gRepartitionAge2019, gRepartitionAge2020 
+                             + rremove("x.text") + font("x.text", size = 10),
                              common.legend = TRUE, legend="bottom", ncol = 1, nrow = 3) %>%
   annotate_figure(figRepartitionAge,
                 top = text_grob("Répartition des décès par âge et selon le sexe en France",
