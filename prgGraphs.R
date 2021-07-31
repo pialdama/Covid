@@ -511,7 +511,7 @@ Sentinelles <- Sentinelles %>%
 view(Sentinelles)
 
 SentinellesMerge<-Sentinelles%>%
-  select(ISO.week,inc100)
+  subset(select = c(ISO.week,inc100))
 
 
 # Aggregation hebdo de la série de décès quotidiens
@@ -537,7 +537,7 @@ dbMerge$cose<-cos(2*pi*dbMerge$t/52)
 dbMerge$sine<-sin(2*pi*dbMerge$t/52)
 ModelPoissonBis<-glm( 
   DECES ~ t + cose + sine + inc100:Annee,
-  data = filter(dbMerge,dbMerge$Annee>=2014 & dbMerge$Annee=<2019),
+  data = filter(dbMerge,dbMerge$Annee >= 2014 & dbMerge$Annee <= 2019),
   family = quasipoisson(link="log"),
   control = list(maxit = 500))
 
