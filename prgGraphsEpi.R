@@ -15,6 +15,13 @@ library(viridis)
 setwd("~/Documents/Covid")
 
 
+DateDebutGraphique <- as.Date("2020-07-01")
+SpanParam<-0.1
+# DateDebutGraphique <- as.Date("2021-03-01")
+# SpanParam<-0.125
+
+
+
 ############################################################################################################################################
 # Importation et preparation des donnees
 ############################################################################################################################################
@@ -65,16 +72,6 @@ dest <- "~/Documents/covid/departementFr.csv"
 vaccin <- download.file(url,dest)
 departementFr <- read.csv("~/Documents/covid/departementFr.csv")
 
-# Charge les donnees SPF d'ensemble
-dbspf <- read_csv("spf_donneesensemble.csv")
-dbspfDep <- read_csv("~/Documents/covid/spf_donneesensemble_dep.csv")
-dbspfDep <- dbspfDep %>%
-  mutate(incid_hosp_7j=rollapply(incid_hosp, 7, sum, align = "right", fill = NA))%>%
-  mutate(incid_rea_7j=rollapply(incid_rea, 7, sum, align = "right", fill = NA)) %>%
-  mutate(RatioHospIncidence=rollapply(incid_hosp_7j/lag(pos_7j,7), 7, mean, align = "right", fill = NA)) %>%
-  mutate(RatioReaIncidence=rollapply(incid_rea_7j/lag(pos_7j,7), 7, mean, align = "right", fill = NA)) 
-  
-dbspfDep$jour <- dbspfDep$date  
 
 # Charge les donnees SPF sur les vaccins 
 dbvaccin <- read_delim("spf_donneesvaccins.csv",
@@ -97,6 +94,20 @@ dbvaccin$clage_vacsi <- case_when(
   dbvaccin$clage_vacsi == 79  ~ "75-79 ans",
   dbvaccin$clage_vacsi == 80  ~ "80 ans et plus",
   TRUE ~ "Total")
+
+# Charge les donnees SPF d'ensemble
+dbspf <- read_csv("spf_donneesensemble.csv")
+dbspfDep <- read_csv("~/Documents/covid/spf_donneesensemble_dep.csv")
+dbspfDep <- dbspfDep %>%
+  mutate(incid_hosp_7j=rollapply(incid_hosp, 7, sum, align = "right", fill = NA))%>%
+  mutate(incid_rea_7j=rollapply(incid_rea, 7, sum, align = "right", fill = NA)) %>%
+  mutate(incid_dc_7j=rollapply(incid_dchosp, 7, sum, align = "right", fill = NA)) %>%
+  mutate(RatioHospIncidence=incid_hosp_7j/lag(pos_7j,7)) %>%
+  mutate(RatioReaIncidence=incid_rea_7j/lag(pos_7j,7)) %>%
+  mutate(RatioDcIncidence=incid_dc_7j/lag(pos_7j,20))
+
+dbspfDep$jour <- dbspfDep$date  
+
 
 # Charge les donnees SPF sur les vaccins 
 dbvaccinDep <- read_delim("spf_donneesvaccins_dep.csv",
@@ -152,11 +163,6 @@ mutate(Reffectif= TauxIncidence/lag(TauxIncidence,7))
 db<-db %>%
   filter(cl_age90 != 0)  # filtre les données France entière
 
-# DateDebutGraphique <- as.Date("2020-07-01")
-# SpanParam<-0.1
-DateDebutGraphique <- as.Date("2021-03-01")
-SpanParam<-0.125
-
 
 # Graphique
 graph.CasCovid<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
@@ -192,7 +198,7 @@ graph.incidence<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
               se = FALSE,
               color = "black")+
   theme_minimal() + 
-  scale_color_viridis(discrete = TRUE) +
+  scale_color_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   labs( y = NULL,
@@ -220,7 +226,7 @@ graph.Reffectif<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
               se = FALSE,
               color = "black")+
   geom_hline(yintercept =1, colour = "black")+
-  scale_color_viridis(discrete = TRUE) +
+    scale_color_brewer(type = "qualitative", palette = "Set3") +
   theme_minimal() + 
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
@@ -240,7 +246,7 @@ graph.TauxPosSmooth<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
   geom_smooth( span = SpanParam , se = FALSE)+
   #facet_wrap(.~classe_age, nrow = 5) +
   theme_minimal() + 
-  scale_color_viridis(discrete = TRUE) +
+    scale_color_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   labs( y = NULL,
@@ -263,7 +269,7 @@ graph.HospitLog<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   scale_y_log10() +
-  scale_color_viridis(discrete = TRUE) +
+    scale_color_brewer(type = "qualitative", palette = "Set3") +
   labs( y = "Effectis",
         x = NULL ,
         color = NULL,
@@ -278,7 +284,7 @@ graph.Hospit<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
                         aes(x=jour, y=hosp, fill = classe_age) ) +
   geom_area(alpha=0.6 , size=.5, colour="white") +
   theme_minimal() + 
-  scale_fill_viridis(discrete = TRUE) +
+  scale_fill_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   labs( y = NULL,
@@ -294,17 +300,17 @@ ggsave("gHospit.png", plot=graph.Hospit,bg="white", height = 6, width = 10)
 graph.HospitRepart<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
                      aes(x = jour, y = hosp, fill = classe_age) ) +
   geom_col(alpha=0.6, position ="fill", width = 1) +
+  theme_minimal() +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   scale_y_continuous(labels = scales::percent) +
-  scale_fill_viridis(discrete = TRUE) +
+  scale_fill_brewer(type = "qualitative", palette = "Set3") +
   labs( y = NULL,
         x = NULL ,
         fill = "Classes d'âge",
         title = "Personnes hospitalisées pour Covid19",
         subtitle = "Répartition en % par classes d'âge",
-        caption = "Source : Santé Publique France, SI-VIC. Graphique : P. Aldama @paldama.") +
-  theme_minimal() 
+        caption = "Source : Santé Publique France, SI-VIC. Graphique : P. Aldama @paldama.") 
 print(graph.HospitRepart)
 ggsave("gHospitRepart.png", plot=graph.HospitRepart,bg="white", height = 6, width = 10)
 
@@ -314,7 +320,7 @@ graph.ReaLog<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
   geom_point(aes(group = classe_age, color = classe_age), size = 0.5)+
   geom_smooth(aes(group = classe_age, color = classe_age),span = SpanParam, se = TRUE) +
   theme_minimal() + 
-  scale_color_viridis(discrete = TRUE) +
+    scale_color_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   scale_y_log10() +
@@ -334,7 +340,7 @@ graph.rea<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
   theme_minimal() + 
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
-  scale_fill_viridis(discrete = TRUE) +
+  scale_fill_brewer(type = "qualitative", palette = "Set3") +
   labs( y = "Effectis",
         x = NULL ,
         fill = "Classe d'âge",
@@ -349,7 +355,7 @@ graph.ReaRepart<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
                            aes(x = jour, y = rea, fill = classe_age) ) +
   geom_col(alpha=0.6, position ="fill", width = 1) +
   theme_minimal() + 
-  scale_fill_viridis(discrete = TRUE) +
+  scale_fill_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   scale_y_continuous(labels = scales::percent) +
@@ -393,24 +399,6 @@ graph.NCas<-ggplot(data=filter(dbspf,dbspf$date>DateDebutGraphique),
         title = "Cas confirmés par date de prélèvement")
 print(graph.NCas)
 #ggsave("gNCas.png", plot=graph.NCas,bg="white", height = 6, width = 10)
-
-test<- filter(dbSOSmed_urg,dbSOSmed_urg$date_de_passage>DateDebutGraphique &
-                dbSOSmed_urg$classe_age=="Total")
-
-# Graphique
-graph.NUrgences<-ggplot(data=filter(dbSOSmed_urg,dbSOSmed_urg$date_de_passage>DateDebutGraphique &
-                                 dbSOSmed_urg$classe_age=="Total"),aes(x=date_de_passage, y = nbre_pass_corona)) +
-  geom_col(fill = "light blue" , alpha = 0.5,  width = 1) +
-  #geom_smooth(span = SpanParam, size=.5, colour = "blue",se = FALSE) +
-  theme_minimal() + 
-  theme(plot.title = element_text(size = 10, face = "bold"),
-        plot.subtitle = element_text(size = 9)) +
-  labs( y = NULL,
-        x = NULL ,
-        color = NULL,
-        title = "Passages aux urgences pour Covid19")
-print(graph.NUrgences)
-ggsave("gNUrgences.png", plot=graph.NUrgences,bg="white", height = 6, width = 10)
 
 # Graphique
 graph.Nhosp<-ggplot(data=filter(dbspf,dbspf$date>DateDebutGraphique),
@@ -489,7 +477,7 @@ graph.Vaccins<-ggplot(data=filter(dbvaccin,
   annotate("text", x=as.Date.character("2020-12-27"), y=50+2, label = "50%", color = "black") +
   annotate("text", x=as.Date.character("2020-12-27"), y=80+2, label = "80%", color = "black") +
   scale_y_continuous( limits = c(0,100)) +
-  scale_color_viridis(discrete = TRUE) +
+    scale_color_brewer(type = "qualitative", palette = "Set3") +
   labs( y = "En %",
         x = NULL ,
         color = NULL,
@@ -500,11 +488,70 @@ print(graph.Vaccins)
 ggsave("gVaccin.png", plot=graph.Vaccins,bg="white", height = 6, width = 10)
 
 
+################################################################################################################################################################################################
+# Graphs efficacité vaccinale
+################################################################################################################################################################################################
+
+
+graph.VaccinationIncidenceHosp <- ggplot(data = filter(dbDep,dbDep$incid_hosp_7j>0 & dbDep$pos_7j>0 ), aes(x=couv_dose1, y=RatioHospIncidence*1000)) +
+  geom_point(aes(color = lib_reg, alpha = incid_hosp_7j , size = pos_7j)) + 
+  geom_smooth(aes(group = 1) , method = "rlm",color = "red", se = TRUE ) +
+  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), color = "red") +
+  theme_minimal() + scale_color_viridis(discrete = TRUE, option = "D") +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(size = 11)) +
+  scale_y_log10(n.breaks = 20)+
+  labs( y =  NULL,
+        x = "Taux de vaccination" ,
+        color = "Régions",
+        alpha = "Hospitalisations sur 7 jours",
+        size = "Cas positifs sur 7 jours",
+        title = "Hospitalisations pour 1000 cas positifs détectés 7 jours plus tôt",
+        subtitle = "Chaque point représente une observation par jour et par région, en distinguant selon le nombre de cas détectés \net d'hospitalisations",
+        caption = "Source : Santé Publique France. Graphique : P. Aldama @paldama.")
+ggsave('grVaccinationIncidenceHosp.png', plot=graph.VaccinationIncidenceHosp, bg="white", height = 10, width = 9)
+
+graph.VaccinationIncidenceRea <- ggplot(data = filter(dbDep,dbDep$incid_rea_7j>0 & dbDep$pos_7j>0 ), aes(x=couv_dose1, y=RatioReaIncidence*1000)) +
+  geom_point(aes(color = lib_reg, alpha = incid_rea_7j , size = pos_7j)) + 
+  geom_smooth(aes(group = 1) , method = "rlm", color = "red", se = TRUE ) +
+  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), color = "red") +
+  theme_minimal() + scale_color_viridis(discrete = TRUE, option = "D") +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(size = 11)) +
+  scale_y_log10(n.breaks = 20)+
+  labs( y =  NULL,
+        x = "Taux de vaccination" ,
+        color = "Régions",
+        alpha = "Entrées en soins critiques sur 7 jours",
+        size = "Cas positifs sur 7 jours",
+        title = "Entrées en soins critiques pour 1000 cas positifs détectés 7 jours plus tôt",
+        subtitle = "Chaque point représente une observation par jour et par région, en distinguant selon le nombre de cas détectés \net d'entrées en soins critiques",
+        caption = "Source : Santé Publique France. Graphique : P. Aldama @paldama.")
+ggsave('grVaccinationIncidenceRea.png', plot=graph.VaccinationIncidenceRea, bg="white", height = 10, width = 9)
+
+
+graph.VaccinationIncidenceDeces <- ggplot(data = filter(dbDep,dbDep$incid_dc_7j>0 & dbDep$pos_7j>0 ), aes(x=couv_dose1, y=RatioDcIncidence*1000)) +
+  geom_point(aes(color = lib_reg, alpha = incid_dc_7j , size = pos_7j)) + 
+  geom_smooth(aes(group = 1) , method = "rlm", color = "red", se = TRUE ) +
+  stat_cor(aes(label = paste(..rr.label.., ..p.label.., sep = "~`,`~")), color = "red") +
+  theme_minimal() + scale_color_viridis(discrete = TRUE, option = "D") +
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(size = 11)) +
+  scale_y_log10(n.breaks = 20)+
+  labs( y =  NULL,
+        x = "Taux de vaccination" ,
+        color = "Régions",
+        alpha = "Décès hospitaliers sur 7 jours",
+        size = "Cas positifs sur 7 jours",
+        title = "Décès hospitaliers pour 1000 cas positifs détectés 20 jours plus tôt",
+        subtitle = "Chaque point représente une observation par jour et par région, en distinguant selon le nombre de cas détectés \net de décès hospitaliers",
+        caption = "Source : Santé Publique France. Graphique : P. Aldama @paldama.")
+ggsave('grVaccinationIncidenceDeces.png', plot=graph.VaccinationIncidenceDeces,bg="white", height = 10, width = 9)
+
 ##################################################################################################################################
 # Graphs et cartes par départements
 ##################################################################################################################################
 
- 
 dbsidep_dep <- read_delim("sidep_donneesincidence_dep.csv", 
                                          ";", escape_double = FALSE, trim_ws = TRUE)
 dbsidep_dep <- dbsidep_dep %>%
@@ -535,7 +582,8 @@ graph.HeatMapIncidence <- ggplot(data=filter(dbsidep_dep,dbsidep_dep$jour>as.cha
   geom_tile( aes(jour, dep, fill=TauxIncidence) ) +
   theme_minimal() +
   scale_fill_viridis("Taux d'incidence",
-                     trans = scales::pseudo_log_trans(sigma = 20)) +
+                     trans = scales::pseudo_log_trans(sigma = 50),
+                     option = "G") +
   theme(plot.title = element_text(size = 18, face = "bold"),
         plot.subtitle = element_text(size = 12),
         panel.grid.major = element_blank(), 
@@ -573,7 +621,7 @@ for (Dep in departementFr$code_departement){
                 se = FALSE,
                 colour = "black") +
     theme_minimal() +
-    scale_color_viridis(discrete = TRUE) +
+      scale_color_brewer(type = "qualitative", palette = "Set3") +
     theme(plot.title = element_text(size = 14, face = "bold"),
           plot.subtitle = element_text(size = 9)) +
     labs( y = NULL,
@@ -590,45 +638,5 @@ for (Dep in departementFr$code_departement){
   ggsave(GraphOutput, plot=graph.TauxIncidenceDep,bg="white", height = 7, width = 9)
 
 }
-
-
-graph.VaccinationIncidenceHosp <- ggplot(data = dbDep, aes(x=couv_dose1, y=RatioHospIncidence)) +
-  geom_point(aes(color = lib_reg, alpha = incid_hosp_7j , size = pos_7j)) + 
-  geom_smooth(aes(group = 1) , method = "loess", span = 1, color = "red", se = FALSE ) +
-  theme_minimal() + scale_color_viridis(discrete = TRUE, option = "viridis") +
-  theme(plot.title = element_text(size = 14, face = "bold"),
-        plot.subtitle = element_text(size = 11)) +
-  scale_y_continuous(breaks = c(0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5,1),
-                     trans = scales::log10_trans())+
-  labs( y =  NULL,
-        x = "Taux de vaccination (au moins une dose)" ,
-        color = "Régions",
-        alpha = "Nombre d'hospitalisations sur 7 jours",
-        size = "Nombre de cas positifs sur 7 jours",
-        title = "L'effet de la vaccination contre le Covid19",
-        subtitle = "Ratio incidence hospitalière(j)/cas confirmés(j-7) en moyenne sur 7 jours et tendance LOESS",
-        caption = "Source : Santé Publique France. Graphique : P. Aldama @paldama.")
-ggsave('grVaccinationIncidenceHosp.png', plot=graph.VaccinationIncidenceHosp,bg="white", height = 10, width = 7)
-
-graph.VaccinationIncidenceRea <- ggplot(data = dbDep, aes(x=couv_dose1, y=RatioReaIncidence)) +
-  geom_point(aes(color = lib_reg, alpha = incid_hosp_7j , size = pos_7j)) + 
-  geom_smooth(aes(group = 1) , method = "loess", span = 1, color = "red", se = FALSE ) +
-  theme_minimal() + scale_color_viridis(discrete = TRUE, option = "viridis") +
-  theme(plot.title = element_text(size = 14, face = "bold"),
-        plot.subtitle = element_text(size = 11)) +
-  scale_y_continuous(breaks = c(0.001,0.002,0.005,0.01,0.02,0.05,0.1,0.2,0.5,1),
-                     trans = scales::log10_trans())+
-  labs( y =  NULL,
-        x = "Taux de vaccination (au moins une dose)" ,
-        color = "Régions",
-        alpha = "Nombre d'hospitalisations sur 7 jours",
-        size = "Nombre de cas positifs sur 7 jours",
-        title = "L'effet de la vaccination contre le Covid19",
-        subtitle = "Ratio incidence soins critiques(j)/cas confirmés(j-7) en moyenne sur 7 jours et tendance LOESS",
-        caption = "Source : Santé Publique France. Graphique : P. Aldama @paldama.")
-ggsave('grVaccinationIncidenceRea.png', plot=graph.VaccinationIncidenceRea,bg="white", height = 10, width = 7)
-
-
-
 
 

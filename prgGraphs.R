@@ -202,8 +202,9 @@ gRepartitionAge2020<-print(ggplot(data=db1820,aes(x=age,y=after_stat(count),fill
 
 figRepartitionAge<-ggarrange(gRepartitionAge2018, gRepartitionAge2019, gRepartitionAge2020 
                              + rremove("x.text") + font("x.text", size = 10),
-                             common.legend = TRUE, legend="bottom", ncol = 1, nrow = 3) %>%
-  annotate_figure(figRepartitionAge,
+                             common.legend = TRUE, legend="bottom", ncol = 1, nrow = 3) 
+
+annotate_figure(figRepartitionAge,
                 top = text_grob("Répartition des décès par âge et selon le sexe en France",
                                 hjust = 0.7,
                                 vjust = 0.5,
@@ -212,7 +213,7 @@ figRepartitionAge<-ggarrange(gRepartitionAge2018, gRepartitionAge2019, gRepartit
                 bottom = text_grob("Source: Insee, état civil, fichiers des décès individuels. Graphique : P. Aldama @paldama.",
                                    hjust = 1, x = 1, face = "italic", size = 10),
                 left = text_grob("Nombre de décès par âge", color = "black", rot = 90) )
-ggsave("gFigRepartitionAgeSexe.png", plot=figRepartitionAge, height = 10, width = 8)
+ggsave("gFigRepartitionAgeSexe.png", plot=figRepartitionAge,  bg="white",height = 10, width = 8)
 
 
 gRepartitionAgeSexe<-ggplot(data=db1820,aes(x=age,after_stat(count))) +  
@@ -231,7 +232,7 @@ gRepartitionAgeSexe<-ggplot(data=db1820,aes(x=age,after_stat(count))) +
         title = "Répartition des décès par âge et selon le sexe en 2020",
         subtitle = "En noir, la moyenne 2018-2019.",
         caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gRepartitionAgeSexe.png", plot=gRepartitionAgeSexe, height = 5 , width = 10)
+ggsave("gRepartitionAgeSexe.png", plot=gRepartitionAgeSexe, bg="white", height = 5 , width = 10)
 
 
 gRepartitionAgeSexeMois<-ggplot(data=db1820,aes(x=age,after_stat(count))) +  
@@ -255,7 +256,7 @@ gRepartitionAgeSexeMois<-ggplot(data=db1820,aes(x=age,after_stat(count))) +
         title = "Répartition des décès par âge et selon le sexe et le mois en 2020",
         subtitle = "En noir, la moyenne 2018-2019.",
         caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gRepartitionAgeSexeMois.png", plot=gRepartitionAgeSexeMois, height = 12 , width = 10)
+ggsave("gRepartitionAgeSexeMois.png", plot=gRepartitionAgeSexeMois, bg="white", height = 12 , width = 10)
 
 
 
@@ -308,7 +309,7 @@ gClasseAge<-ggplot(data=db1820ClasseAge,aes(x=JourMois, y=DECES)) +
          title = "Décès quotidiens par classes d'âge, de 2018 à 2021",
          subtitle = "Moyenne glissante sur 7 jours. Tendance 2018-2019 en noir. France métropolitaine.",
          caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gClasseAge.png", plot=gClasseAge, height = 10 , width = 1.2*10)
+ggsave("gClasseAge.png", plot=gClasseAge,  bg="white",height = 10 , width = 1.2*10)
 
 
 db1820ClasseAgeSexe<-db1820 %>%
@@ -341,7 +342,7 @@ gClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
          title = "Décès quotidiens par classes d'âge et selon le sexe, de 2018 à 2021",
          subtitle = "Moyenne glissante sur 7 jours. Tendance 2018-2019 en noir. France métropolitaine.",
          caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gClasseAgeSexe.png",plot=gClasseAgeSexe, height = 10 , width = 1.2*10)
+ggsave("gClasseAgeSexe.png",plot=gClasseAgeSexe,  bg="white",height = 10 , width = 1.2*10)
 
 gTimeSeriesClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe) +
    geom_ma(aes(x=Date, y=DECES), ma_fun = SMA,n=7 ,size = 0.6,color="blue", linetype="solid") +
@@ -361,7 +362,7 @@ gTimeSeriesClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe) +
          title = "Décès quotidiens par classes d'âge, de 2018 à 2021",
          subtitle = "Moyenne glissante sur 7 jours. Tendance 2018-2019 en noir. France métropolitaine.",
          caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gTimeSeriesClasseAgeSexe.png",plot=gTimeSeriesClasseAgeSexe, height = 10 , width = 1.2*10)
+ggsave("gTimeSeriesClasseAgeSexe.png",plot=gTimeSeriesClasseAgeSexe,  bg="white",height = 10 , width = 1.2*10)
 
 
 ############################################################################################################
@@ -434,7 +435,7 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
         title = "Décès quotidiens depuis 2000 en France métropolitaine",
         subtitle = "En noir, la moyenne 2016–2019.",
         caption = " Source : Insee, fichier des décès individuels. Graphique : @paldama, inspiré de B. Coulmont.")
-ggsave("gTimeSeriesTransversal.png",plot=gTimeSeriesTransversal, height = 7 , width = 7)
+ggsave("gTimeSeriesTransversal.png",plot=gTimeSeriesTransversal, bg="white", height = 7 , width = 7)
 
 
 # Graphique depuis 1968
@@ -485,7 +486,7 @@ gTimeSeriesLongTerme<-ggplot(data=filter(DecesFM,DecesFM$Annee>=1968),aes(x=Jour
         title = "Excès de mortalité en France métropolitaine depuis 1968",
         subtitle = "En pourcentage de la mortalité attendue, calculée à partir d'une régression linéaire avec tendance polynomiale et composante cyclique.",
         caption = " Source : Insee, fichier des décès individuels. Calculs : @paldama")
-ggsave("gTimeSeriesLongTerme.png",plot=gTimeSeriesLongTerme, height = 4 , width =8)
+ggsave("gTimeSeriesLongTerme.png",plot=gTimeSeriesLongTerme, bg="white", height = 4 , width =8)
 
 
 ##############################################################################################
@@ -579,5 +580,5 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
         subtitle = "Nombre de décès observés et attendus en absence d'épidémie (grippale ou Covid19)",
         caption = "Sources : Insee, fichier des décès individuels et Réseau Sentinelles pour l'incidence de syndrômes grippaux. Calculs et erreurs : P. Aldama / @paldama")
 
-ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, height = 7, width =10)
+ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, bg="white", height = 7, width =10)
 print(gTimeSeriesPoisson)
