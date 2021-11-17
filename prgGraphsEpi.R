@@ -15,13 +15,6 @@ library(viridis)
 setwd("~/Documents/Covid")
 
 
-DateDebutGraphique <- as.Date("2020-07-01")
-SpanParam<-0.1
-# DateDebutGraphique <- as.Date("2021-03-01")
-# SpanParam<-0.125
-
-
-
 ############################################################################################################################################
 # Importation et preparation des donnees
 ############################################################################################################################################
@@ -36,7 +29,7 @@ panel <- c("France","United Kingdom", "Spain", "Germany", "Italy", "Netherlands"
 owid<-owid %>%
   filter(location %in% panel   )
 
-# Data from SI-VIC 
+# Data from SI-VIC
 url <- "https://www.data.gouv.fr/fr/datasets/r/08c18e08-6780-452d-9b8c-ae244ad529b3"
 dest <- "~/Documents/covid/sivic_donneeshospit.csv"
 sivic<- download.file(url,dest)
@@ -71,6 +64,15 @@ url <- "https://www.data.gouv.fr/fr/datasets/r/70cef74f-70b1-495a-8500-c089229c0
 dest <- "~/Documents/covid/departementFr.csv"
 vaccin <- download.file(url,dest)
 departementFr <- read.csv("~/Documents/covid/departementFr.csv")
+
+
+
+DateDebutGraphique <- as.Date("2020-07-01")
+SpanParam<-0.1
+# DateDebutGraphique <- as.Date("2021-03-01")
+# SpanParam<-0.125
+# DateDebutGraphique <- as.Date("2021-09-01")
+# SpanParam<-0.6
 
 
 # Charge les donnees SPF sur les vaccins 
@@ -157,20 +159,21 @@ db$classe_age <- case_when(
 # Calcul taux d'incidence
 db<-arrange(db,classe_age,jour) %>%
 mutate(TauxIncidence=round(rollapply(P,7,sum,align='right',fill=NA)/pop*100000))%>%
-mutate(Reffectif= TauxIncidence/lag(TauxIncidence,7))
+mutate(ReffectifCas= TauxIncidence/lag(TauxIncidence,7)) %>%
+mutate(ReffectifHosp = hosp/lag(hosp,7)) %>%
+mutate(ReffectifRea = rea/lag(rea,7)) 
 
-
-db<-db %>%
-  filter(cl_age90 != 0)  # filtre les données France entière
+# db<-db %>%
+#   filter(cl_age90 != 0)  # filtre les données France entière
 
 
 # Graphique
-graph.CasCovid<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
+graph.CasCovid<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
                         aes(x=jour, y=P) ) +
   geom_col(fill = "light blue" , alpha = 0.5, width = 1) +
   geom_smooth( span = SpanParam , se = FALSE)+
   facet_wrap(.~classe_age, nrow = 5, scales = "free") +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   labs( y = "Effectis",
@@ -183,7 +186,7 @@ print(graph.CasCovid)
 ggsave("gCasCovid.png", plot=graph.CasCovid,bg="white", height = 10, width = 15)
 
 # Graphique
-graph.incidence<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
+graph.incidence<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
                        aes(x=jour, y=TauxIncidence) ) +
   geom_point(aes(group = classe_age, color = classe_age),
              size = 0.5)+
@@ -197,7 +200,7 @@ graph.incidence<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
               span = SpanParam ,
               se = FALSE,
               color = "black")+
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   scale_color_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
@@ -211,7 +214,7 @@ print(graph.incidence)
 ggsave("gIncidence.png", plot=graph.incidence,bg="white", height = 6, width = 10)
 
 
-graph.HeatMapIncidenceClasseAge <- ggplot(data=filter(db,db$jour>DateDebutGraphique)) + 
+graph.HeatMapIncidenceClasseAge <- ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0)) + 
   geom_tile( aes(jour, classe_age, fill=TauxIncidence) ) +
   theme_minimal() + labs_pubr() +
   scale_fill_viridis("Taux d'incidence",
@@ -231,8 +234,8 @@ print(graph.HeatMapIncidenceClasseAge)
 ggsave('grHeatMapIncidenceClasseAge.png', plot=graph.HeatMapIncidenceClasseAge,bg="white")
 
 # Graphique
-graph.Reffectif<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
-                        aes(x=jour, y=Reffectif) ) +
+graph.Reffectif<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
+                        aes(x=jour, y=ReffectifCas) ) +
   geom_point(aes(group = classe_age, color = classe_age),
               size = 0.5)+
   geom_smooth(aes(group = classe_age, color = classe_age),
@@ -247,7 +250,7 @@ graph.Reffectif<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
               color = "black")+
   geom_hline(yintercept =1, colour = "black")+
   scale_color_brewer(type = "qualitative", palette = "Set3") +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   labs( y = NULL,
@@ -260,8 +263,40 @@ print(graph.Reffectif)
 ggsave("gReffectif.png", plot=graph.Reffectif,bg="white", height = 6, width = 10)
 
 # Graphique
+SpanParamTemp<- 0.3
+graph.ReffectifHosp<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
+                        aes(x=jour, y=ReffectifHosp) ) +
+  geom_point(aes(group = classe_age,  color = classe_age),
+             size = 0.5, alpha = 0.5)+
+  geom_smooth(aes(group = classe_age, color = classe_age),
+              size = 0.8,
+              span = SpanParamTemp ,
+              se = FALSE)+
+  geom_smooth(data = filter(db,db$jour>DateDebutGraphique & cl_age90 == 0),
+              aes(x=jour, y=ReffectifHosp),
+              size = 1.5,
+              span = SpanParam ,
+              se = FALSE,
+              color = "black")+
+  geom_hline(yintercept =1, colour = "black")+
+  scale_color_brewer(type = "qualitative", palette = "Set3") +
+  #facet_grid(.~classe_age) +
+  theme_minimal() +  labs_pubr() +
+  theme(plot.title = element_text(size = 12, face = "bold"),
+        plot.subtitle = element_text(size = 9)) +
+  labs( y = NULL,
+        x = NULL ,
+        color = NULL,
+        title = "Taux de reproduction effectif par classe d'âge à partir des hospitalisations",
+        subtitle = "Ratio du nombre d'hospitalisations sur 7 jours entre j et j-7. En noir, le R pour la France entière.",
+        caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
+print(graph.ReffectifHosp)
+ggsave("gReffectifHosp.png", plot=graph.ReffectifHosp,bg="white", height = 6, width = 10)
+
+
+# Graphique
 graph.TauxPosSmooth<-ggplot( ) +
-  geom_point(data=filter(db,db$jour>DateDebutGraphique),
+  geom_point(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
              aes(x=jour, y=TxPos, group = classe_age, color = classe_age),
              size = 0.5) +
   geom_smooth(data=filter(db,db$jour>DateDebutGraphique),
@@ -275,7 +310,7 @@ graph.TauxPosSmooth<-ggplot( ) +
               span = SpanParam ,
               se = FALSE,
               color = "black") +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   scale_color_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
@@ -290,11 +325,11 @@ ggsave("gTauxPos.png", plot=graph.TauxPosSmooth,bg="white", height = 6, width = 
 
 
 # Graphique
-graph.HospitLog<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
+graph.HospitLog<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
                         aes(x=jour, y=hosp) ) +
   geom_point(aes(group = classe_age, color = classe_age), size = 0.5)+
   geom_smooth(aes(group = classe_age, color = classe_age),span = SpanParam, se = TRUE) +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   scale_y_log10() +
@@ -309,10 +344,10 @@ print(graph.HospitLog)
 ggsave("gHospitLog.png", plot=graph.HospitLog,bg="white", height = 6, width = 10)
 
 # Graphique
-graph.Hospit<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
+graph.Hospit<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
                         aes(x=jour, y=hosp, fill = classe_age) ) +
   geom_area(alpha=0.6 , size=.5, colour="white") +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   scale_fill_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
@@ -326,10 +361,10 @@ print(graph.Hospit)
 ggsave("gHospit.png", plot=graph.Hospit,bg="white", height = 6, width = 10)
 
 # Graphique
-graph.HospitRepart<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
+graph.HospitRepart<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
                      aes(x = jour, y = hosp, fill = classe_age) ) +
   geom_col(alpha=0.6, position ="fill", width = 1) +
-  theme_minimal() +
+  theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   scale_y_continuous(labels = scales::percent) +
@@ -344,11 +379,11 @@ print(graph.HospitRepart)
 ggsave("gHospitRepart.png", plot=graph.HospitRepart,bg="white", height = 6, width = 10)
 
 # Graphique
-graph.ReaLog<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
+graph.ReaLog<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
                      aes(x=jour, y=rea) ) +
   geom_point(aes(group = classe_age, color = classe_age), size = 0.5)+
   geom_smooth(aes(group = classe_age, color = classe_age),span = SpanParam, se = TRUE) +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
     scale_color_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
@@ -363,10 +398,10 @@ print(graph.ReaLog)
 ggsave("gReaLog.png", plot=graph.ReaLog,bg="white", height = 6, width = 10)
 
 # Graphique
-graph.rea<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
+graph.rea<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
                      aes(x=jour, y=rea, fill = classe_age) ) +
   geom_area(alpha=0.6 , size=.5, colour="white") +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   scale_fill_brewer(type = "qualitative", palette = "Set3") +
@@ -380,10 +415,10 @@ print(graph.rea)
 ggsave("gRea.png", plot=graph.rea,bg="white", height = 6, width = 10)
 
 # Graphique
-graph.ReaRepart<-ggplot(data=filter(db,db$jour>DateDebutGraphique),
+graph.ReaRepart<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
                            aes(x = jour, y = rea, fill = classe_age) ) +
   geom_col(alpha=0.6, position ="fill", width = 1) +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   scale_fill_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
@@ -403,7 +438,7 @@ graph.NCasRemontee<-ggplot(data=filter(dbspf,dbspf$date>DateDebutGraphique),
                    aes(x=date, y=conf_j1) ) +
   geom_col(fill = "light blue" , alpha = 0.5, width = 1) +
   geom_smooth(span = SpanParam, size=.5, colour = "blue",se = FALSE) +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 10, face = "bold"),
         plot.subtitle = element_text(size = 8)) +
   labs( y = NULL,
@@ -419,7 +454,7 @@ graph.NCas<-ggplot(data=filter(dbspf,dbspf$date>DateDebutGraphique),
                     aes(x=date, y=pos) ) +
   geom_col(fill = "light blue" , alpha = 0.5, width = 1) +
   geom_smooth(span = SpanParam, size=.5, colour = "blue",se = FALSE) +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 10, face = "bold"),
         plot.subtitle = element_text(size = 8)) +
   labs( y = NULL,
@@ -434,7 +469,7 @@ graph.Nhosp<-ggplot(data=filter(dbspf,dbspf$date>DateDebutGraphique),
                   aes(x=date, y=incid_hosp) ) +
   geom_col(fill = "light blue" , alpha = 0.5,  width = 1) +
   geom_smooth(span = SpanParam, size=.5, colour = "blue",se = FALSE) +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 10, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   labs( y = NULL,
@@ -449,7 +484,7 @@ graph.Nrea<-ggplot(data=filter(dbspf,dbspf$date>DateDebutGraphique),
                     aes(x=date, y=incid_rea) ) +
   geom_col(fill = "light blue" , alpha = 0.5, width = 1) +
   geom_smooth(span = SpanParam, size=.5, colour = "blue",se = FALSE) +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 10, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   labs( y = NULL,
@@ -464,7 +499,7 @@ graph.Ndeces<-ggplot(data=filter(dbspf,dbspf$date>DateDebutGraphique),
                    aes(x=date, y=incid_dchosp ) )+
   geom_col(fill = "light blue" , alpha = 0.5, width = 1) +
   geom_smooth(span = SpanParam, size=.5, colour = "blue",se = FALSE) +
-  theme_minimal() + 
+  theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 10, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   labs( y = NULL,
@@ -500,7 +535,7 @@ graph.Vaccins<-ggplot(data=filter(dbvaccin,
   geom_hline(yintercept = 50, colour = "black", linetype = "dashed", size = 0.7)  +
   geom_hline(yintercept = 80, colour = "black", linetype = "solid", size = 0.7 )  +
   #facet_wrap(.~clage_vacsi)+
-  theme_minimal() + 
+  theme_minimal() + labs_pubr() +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
   annotate("text", x=as.Date.character("2020-12-27"), y=50+2, label = "50%", color = "black") +
@@ -605,6 +640,8 @@ graph.VaccinationIncidenceHospBis <- ggplot(data = filter(dbDep,dbDep$incid_hosp
 ggsave('grVaccinationIncidenceHospBis.png', plot=graph.VaccinationIncidenceHospBis, bg="white", height = 12, width = 10)
 print(graph.VaccinationIncidenceHospBis)
 
+
+
 graph.VaccinationIncidenceRea <- ggplot(data = filter(dbDep,dbDep$incid_rea_7j>0 & dbDep$tx_incid > seuilTxIncid), 
                                         aes(x=couv_dose1, y=RatioReaIncidence)) +
   geom_point(aes(color = lib_reg, alpha = incid_rea_7j , size = pos_7j)) + 
@@ -686,7 +723,7 @@ dbsidep_dep$classe_age <- case_when(
 # Graphique
 graph.HeatMapIncidence <- ggplot(data=filter(dbsidep_dep,dbsidep_dep$jour>as.character("2020-05-01") & dbsidep_dep$classe_age=="Total" & dbsidep_dep$dep<=95)) + 
   geom_tile( aes(jour, dep, fill=TauxIncidence) ) +
-  theme_minimal() +
+  theme_minimal() +  labs_pubr() +
   scale_fill_viridis("Taux d'incidence",
                      trans = scales::pseudo_log_trans(sigma = 50),
                      option = "C") +
@@ -704,45 +741,45 @@ print(graph.HeatMapIncidence)
 ggsave('grHeatMapIncidence.png', plot=graph.HeatMapIncidence,bg="white", height = 20, width = 15)
 
 
-# Graphique
-for (Dep in departementFr$code_departement){
-  #Dep<-"32"
-  NomDepartement = departementFr$nom_departement[departementFr$code_departement==Dep]
-  Legende <- paste("Taux d'incidence du Covid19 dans le département",Dep,"(",NomDepartement,")")
-
-  graph.TauxIncidenceDep<-ggplot(
-    data=filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age!="Total"),
-    aes(x=jour, y=TauxIncidence) ) +
-    geom_point(aes(group = classe_age, color = classe_age),
-               size = 0.5)+
-    geom_smooth(aes(group = classe_age, color = classe_age),
-                size = 0.8,
-                span = SpanParam ,
-                se = FALSE) +
-    geom_smooth(data= filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age=="Total"),
-                aes(x=jour, y=TauxIncidence),
-                method = "loess",
-                size = 1.5,
-                span = SpanParam ,
-                se = FALSE,
-                colour = "black") +
-    theme_minimal() +
-      scale_color_brewer(type = "qualitative", palette = "Set3") +
-    theme(plot.title = element_text(size = 14, face = "bold"),
-          plot.subtitle = element_text(size = 9)) +
-    labs( y = NULL,
-          x = NULL ,
-          color = NULL,
-          title = Legende,
-          subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants, tendance LOESS en trait continu",
-          caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
-
-  #print(graph.TauxIncidenceDep)
-
-  GraphOutput <- paste("gTauxIncidenceDep",Dep,".png")
-
-  ggsave(GraphOutput, plot=graph.TauxIncidenceDep,bg="white", height = 7, width = 9)
-
-}
-
-
+# # Graphique
+# for (Dep in departementFr$code_departement){
+#   #Dep<-"32"
+#   NomDepartement = departementFr$nom_departement[departementFr$code_departement==Dep]
+#   Legende <- paste("Taux d'incidence du Covid19 dans le département",Dep,"(",NomDepartement,")")
+# 
+#   graph.TauxIncidenceDep<-ggplot(
+#     data=filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age!="Total"),
+#     aes(x=jour, y=TauxIncidence) ) +
+#     geom_point(aes(group = classe_age, color = classe_age),
+#                size = 0.5)+
+#     geom_smooth(aes(group = classe_age, color = classe_age),
+#                 size = 0.8,
+#                 span = SpanParam ,
+#                 se = FALSE) +
+#     geom_smooth(data= filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age=="Total"),
+#                 aes(x=jour, y=TauxIncidence),
+#                 method = "loess",
+#                 size = 1.5,
+#                 span = SpanParam ,
+#                 se = FALSE,
+#                 colour = "black") +
+#     theme_minimal() +  labs_pubr() +
+#       scale_color_brewer(type = "qualitative", palette = "Set3") +
+#     theme(plot.title = element_text(size = 14, face = "bold"),
+#           plot.subtitle = element_text(size = 9)) +
+#     labs( y = NULL,
+#           x = NULL ,
+#           color = NULL,
+#           title = Legende,
+#           subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants, tendance LOESS en trait continu",
+#           caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
+# 
+#   #print(graph.TauxIncidenceDep)
+# 
+#   GraphOutput <- paste("gTauxIncidenceDep",Dep,".png")
+# 
+#   ggsave(GraphOutput, plot=graph.TauxIncidenceDep,bg="white", height = 7, width = 9)
+# 
+# }
+# 
+# 

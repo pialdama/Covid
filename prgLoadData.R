@@ -6,7 +6,7 @@ dest<-"~/Documents/Covid/HistoricalDataMortality.csv"
 data<-download.file(url, dest)
 
 # Insee data on mortality for 2020/2021
-url<-"https://www.insee.fr/fr/statistiques/fichier/4487988/2021-08-06_detail.zip"
+url<-"https://www.insee.fr/fr/statistiques/fichier/4487988/2021-11-02_detail.zip"
 dest<-"~/Documents/Covid/dataZ.zip"
 download.file(url, dest)
 unzip("~/Documents/Covid/dataZ.zip")

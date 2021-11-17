@@ -562,7 +562,7 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
   geom_line(aes(x=Date, y=DECES, color = "obs"),size=0.5) +
   geom_line(aes(x=Date, y=DecesAttendus, color = "fit"),size=1) +
   scale_color_manual(name =" Nombre de décès ",
-                     labels = c("attendus","observés"),
+                     labels = c("observés","attendus"),
                      values = c("obs" = "black", "fit" = "blue"))+
   geom_ribbon(aes(x=Date, 
                   ymin = DecesAttendus - 1.96*DecesAttendusSE, 
@@ -582,3 +582,28 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
 
 ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, bg="white", height = 7, width =10)
 print(gTimeSeriesPoisson)
+
+dbMerge<- dbMerge %>%
+   mutate(ExcesMortalite=DECES-DecesAttendus) %>%
+   group_by(Annee) %>%
+   mutate(ExcesMortaliteCumsum=cumsum(ExcesMortalite)) %>%
+   filter(Annee>=2014)
+dbMerge$WeekNum<-substr(ISOweek(dbMerge$Date), 6, 8) 
+
+view(dbMerge$WeekNum)
+   
+ggplot(data=dbMerge, aes(x=WeekNum, y=ExcesMortaliteCumsum, group = Annee, color = Annee)) +
+   geom_line( show.legend = TRUE, na.rm=FALSE)  +
+   geom_hline( yintercept = 0) +
+   theme_minimal() +
+   theme(plot.title = element_text(size = 14, face = "bold"),
+         plot.subtitle = element_text(size = 12),
+         plot.caption = element_text(size = 10, face = "italic"),
+         legend.position = NULL) +
+   labs(x = NULL,
+        y = NULL,
+        title = "Excès de mortalité cumulé en France",
+        subtitle = "Cumul de la différence entre les décès observés et attendus en absence d'épidémie (grippale ou Covid19)",
+        caption = "Sources : Insee, fichier des décès individuels et Réseau Sentinelles pour l'incidence de syndrômes grippaux. Calculs et erreurs : P. Aldama / @paldama")
+
+
