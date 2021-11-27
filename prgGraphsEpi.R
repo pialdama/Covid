@@ -1,15 +1,4 @@
-library(tidyverse)
-library(dplyr)
-library(ggplot2)
-library(frequency)
-library(tidyquant)  
-library(ggpubr)
-library(ISOweek)
-library(readr)
-library(zoo)
-library(smooth)
-library(vars)
-library(viridis)
+
 
 
 setwd("~/Documents/Covid")
@@ -741,45 +730,44 @@ print(graph.HeatMapIncidence)
 ggsave('grHeatMapIncidence.png', plot=graph.HeatMapIncidence,bg="white", height = 20, width = 15)
 
 
-# # Graphique
-# for (Dep in departementFr$code_departement){
-#   #Dep<-"32"
-#   NomDepartement = departementFr$nom_departement[departementFr$code_departement==Dep]
-#   Legende <- paste("Taux d'incidence du Covid19 dans le département",Dep,"(",NomDepartement,")")
-# 
-#   graph.TauxIncidenceDep<-ggplot(
-#     data=filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age!="Total"),
-#     aes(x=jour, y=TauxIncidence) ) +
-#     geom_point(aes(group = classe_age, color = classe_age),
-#                size = 0.5)+
-#     geom_smooth(aes(group = classe_age, color = classe_age),
-#                 size = 0.8,
-#                 span = SpanParam ,
-#                 se = FALSE) +
-#     geom_smooth(data= filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age=="Total"),
-#                 aes(x=jour, y=TauxIncidence),
-#                 method = "loess",
-#                 size = 1.5,
-#                 span = SpanParam ,
-#                 se = FALSE,
-#                 colour = "black") +
-#     theme_minimal() +  labs_pubr() +
-#       scale_color_brewer(type = "qualitative", palette = "Set3") +
-#     theme(plot.title = element_text(size = 14, face = "bold"),
-#           plot.subtitle = element_text(size = 9)) +
-#     labs( y = NULL,
-#           x = NULL ,
-#           color = NULL,
-#           title = Legende,
-#           subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants, tendance LOESS en trait continu",
-#           caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
-# 
-#   #print(graph.TauxIncidenceDep)
-# 
-#   GraphOutput <- paste("gTauxIncidenceDep",Dep,".png")
-# 
-#   ggsave(GraphOutput, plot=graph.TauxIncidenceDep,bg="white", height = 7, width = 9)
-# 
-# }
-# 
-# 
+# Graphique
+for (Dep in departementFr$code_departement){
+  #Dep<-"32"
+  NomDepartement = departementFr$nom_departement[departementFr$code_departement==Dep]
+  Legende <- paste("Taux d'incidence du Covid19 dans le département",Dep,"(",NomDepartement,")")
+
+  graph.TauxIncidenceDep<-ggplot(
+    data=filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age!="Total"),
+    aes(x=jour, y=TauxIncidence) ) +
+    geom_point(aes(group = classe_age, color = classe_age),
+               size = 0.5)+
+    geom_smooth(aes(group = classe_age, color = classe_age),
+                size = 0.8,
+                span = SpanParam ,
+                se = FALSE) +
+    geom_smooth(data= filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age=="Total"),
+                aes(x=jour, y=TauxIncidence),
+                method = "loess",
+                size = 1.5,
+                span = SpanParam ,
+                se = FALSE,
+                colour = "black") +
+    theme_minimal() +  labs_pubr() +
+      scale_color_brewer(type = "qualitative", palette = "Set3") +
+    theme(plot.title = element_text(size = 14, face = "bold"),
+          plot.subtitle = element_text(size = 9)) +
+    labs( y = NULL,
+          x = NULL ,
+          color = NULL,
+          title = Legende,
+          subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants, tendance LOESS en trait continu",
+          caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
+
+  #print(graph.TauxIncidenceDep)
+
+  GraphOutput <- paste("gTauxIncidenceDep",Dep,".png")
+
+  ggsave(GraphOutput, plot=graph.TauxIncidenceDep,bg="white", height = 7, width = 9)
+
+}
+
