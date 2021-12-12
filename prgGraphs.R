@@ -309,7 +309,7 @@ gClasseAge<-ggplot(data=db1820ClasseAge,aes(x=JourMois, y=DECES)) +
          title = "Décès quotidiens par classes d'âge, de 2018 à 2021",
          subtitle = "Moyenne glissante sur 7 jours. Tendance 2018-2019 en noir. France métropolitaine.",
          caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
-ggsave("gClasseAge.png", plot=gClasseAge,  bg="white",height = 10 , width = 1.2*10)
+ggsave("gClasseAge.png", plot=gClasseAge,  bg="white",height = 10 )#, width = 1.2*10)
 
 
 db1820ClasseAgeSexe<-db1820 %>%
@@ -318,19 +318,24 @@ db1820ClasseAgeSexe<-db1820 %>%
 
 gClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
    geom_ma(aes(color = Annee, group = Annee), ma_fun = SMA, n = 7,size = 0.6,linetype = "solid") +
+   # geom_smooth(aes(color = Annee, group = Annee),
+   #             method="loess",
+   #             span=0.3,
+   #             se=FALSE,
+   #             size = 0.6) +
    scale_colour_manual(values = c("darkgray", "lightgray", "blue","red"))  +
-   # stat_summary(data=subset(db1820ClasseAgeSexe,Annee<2020),
-   #              aes(x=JourMois, y=DECES, group = ClasseAge), 
-   #              fun=mean, colour="black", 
-   #              geom="line",
-   #              group=1) +
-   stat_smooth(data=subset(db1820ClasseAgeSexe,Annee<2020),
-               aes(x=JourMois, y=DECES, group = ClasseAge),
-               method="glm",
-               formula = y~splines::bs(x,6),
-               se=FALSE,
-               size = 0.6,
-               color="black") +
+   stat_summary(data=subset(db1820ClasseAgeSexe,Annee<2020),
+                aes(x=JourMois, y=DECES, group = ClasseAge),
+                fun=mean, colour="black",
+                geom="line",
+                group=1) +
+   # geom_smooth(data=subset(db1820ClasseAgeSexe,Annee<2020),
+   #             aes(x=JourMois, y=DECES, group = ClasseAge),
+   #             method="loess",
+   #             span=0.3,
+   #             se=FALSE,
+   #             size = 0.6,
+   #             color="black") +
    facet_grid(ClasseAge~SEXE,scales = "free") +
    theme_minimal() +
    theme(plot.title = element_text(size = 16, face = "bold"),
@@ -583,27 +588,52 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
 ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, bg="white", height = 7, width =10)
 print(gTimeSeriesPoisson)
 
-dbMerge<- dbMerge %>%
+dbMerge$WeekNum<-substr(ISOweek(dbMerge$Date), 6, 8) 
+dbMerge$Annee<-substr(ISOweek(dbMerge$Date), 1, 4)
+dbMerge$AnneeNum<-as.numeric(dbMerge$Annee)
+dbMergeBis<- dbMerge %>%
    mutate(ExcesMortalite=DECES-DecesAttendus) %>%
+   filter(AnneeNum>=2014) %>%
    group_by(Annee) %>%
    mutate(ExcesMortaliteCumsum=cumsum(ExcesMortalite)) %>%
-   filter(Annee>=2014)
-dbMerge$WeekNum<-substr(ISOweek(dbMerge$Date), 6, 8) 
+   ungroup() %>%
+   select(c(Date,ISO.week,ExcesMortaliteCumsum,WeekNum,Annee,AnneeNum))
 
-view(dbMerge$WeekNum)
-   
-ggplot(data=dbMerge, aes(x=WeekNum, y=ExcesMortaliteCumsum, group = Annee, color = Annee)) +
-   geom_line( show.legend = TRUE, na.rm=FALSE)  +
-   geom_hline( yintercept = 0) +
+
+graph.ExcesMortalite<-ggplot() +
+   geom_line(data = filter(dbMergeBis, dbMergeBis$AnneeNum>2019),
+             aes(x=WeekNum, y=ExcesMortaliteCumsum, group = Annee, color = Annee),
+             show.legend = TRUE,
+             na.rm=TRUE,
+             size=2)  +
+   geom_line(data = filter(dbMergeBis, dbMergeBis$AnneeNum<=2019),
+               aes(x=WeekNum, y=ExcesMortaliteCumsum, group = Annee ),
+               show.legend = FALSE,
+               na.rm=TRUE,
+               size = 0.5,
+               color = "grey")  +
+   geom_smooth(data = filter(dbMergeBis, dbMergeBis$AnneeNum<=2019),
+               aes(x=WeekNum, y=ExcesMortaliteCumsum, group = 1),
+               show.legend = FALSE,
+               na.rm=TRUE,
+               color = "yellow",
+               size = 1.5,
+               span=0.1)  +
+   scale_y_continuous(breaks=c(0,10000,20000,30000,40000,50000,60000))+
+   scale_x_discrete(breaks = c("W01","W05","W10","W15","W20","W25","W30", "W35","W40","W45","W50") )+
+   geom_hline( yintercept = 0)  +
    theme_minimal() +
    theme(plot.title = element_text(size = 14, face = "bold"),
-         plot.subtitle = element_text(size = 12),
+         plot.subtitle = element_text(size = 10),
          plot.caption = element_text(size = 10, face = "italic"),
          legend.position = NULL) +
    labs(x = NULL,
         y = NULL,
-        title = "Excès de mortalité cumulé en France",
-        subtitle = "Cumul de la différence entre les décès observés et attendus en absence d'épidémie (grippale ou Covid19)",
+        color = "Année",
+        title = "Excès de mortalité en France en 2020 et 2021",
+        subtitle = "La courbe jaune représente l'excès de mortalité moyen sur la période 2014-2019, principlement lié aux épidémies grippales",
         caption = "Sources : Insee, fichier des décès individuels et Réseau Sentinelles pour l'incidence de syndrômes grippaux. Calculs et erreurs : P. Aldama / @paldama")
 
+
+ggsave("grExcesMortalite.png",plot = graph.ExcesMortalite, bg = "white")
 

@@ -1,5 +1,18 @@
 
 
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(frequency)
+library(tidyquant)  
+library(ggpubr)
+library(ISOweek)
+library(readr)
+library(zoo)
+library(smooth)
+library(viridis)
+library(readr)
+library(reshape2)
 
 setwd("~/Documents/Covid")
 
@@ -7,16 +20,6 @@ setwd("~/Documents/Covid")
 ############################################################################################################################################
 # Importation et preparation des donnees
 ############################################################################################################################################
-
-# Data from Our World in Data
-url <- "https://raw.githubusercontent.com/owid/covid-19-data/master/public/data/owid-covid-data.csv"
-dest <- "~/Documents/covid/owid.csv"
-owid <- download.file(url,dest)
-owid <- read_csv("~/Documents/Covid/owid.csv")
-as.data.frame(owid)
-panel <- c("France","United Kingdom", "Spain", "Germany", "Italy", "Netherlands", "United States", "Israel")
-owid<-owid %>%
-  filter(location %in% panel   )
 
 # Data from SI-VIC
 url <- "https://www.data.gouv.fr/fr/datasets/r/08c18e08-6780-452d-9b8c-ae244ad529b3"
@@ -220,7 +223,7 @@ graph.HeatMapIncidenceClasseAge <- ggplot(data=filter(db,db$jour>DateDebutGraphi
         subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants",
         caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
 print(graph.HeatMapIncidenceClasseAge)
-ggsave('grHeatMapIncidenceClasseAge.png', plot=graph.HeatMapIncidenceClasseAge,bg="white")
+ggsave('grHeatMapIncidenceClasseAge.png', plot=graph.HeatMapIncidenceClasseAge,bg="white",width=10)
 
 # Graphique
 graph.Reffectif<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
@@ -317,7 +320,7 @@ ggsave("gTauxPos.png", plot=graph.TauxPosSmooth,bg="white", height = 6, width = 
 graph.HospitLog<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
                         aes(x=jour, y=hosp) ) +
   geom_point(aes(group = classe_age, color = classe_age), size = 0.5)+
-  geom_smooth(aes(group = classe_age, color = classe_age),span = SpanParam, se = TRUE) +
+  geom_smooth(aes(group = classe_age, color = classe_age),span = SpanParam, se = FALSE) +
   theme_minimal() +  labs_pubr() +
   theme(plot.title = element_text(size = 14, face = "bold"),
         plot.subtitle = element_text(size = 9)) +
@@ -371,7 +374,7 @@ ggsave("gHospitRepart.png", plot=graph.HospitRepart,bg="white", height = 6, widt
 graph.ReaLog<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
                      aes(x=jour, y=rea) ) +
   geom_point(aes(group = classe_age, color = classe_age), size = 0.5)+
-  geom_smooth(aes(group = classe_age, color = classe_age),span = SpanParam, se = TRUE) +
+  geom_smooth(aes(group = classe_age, color = classe_age),span = SpanParam, se = FALSE) +
   theme_minimal() +  labs_pubr() +
     scale_color_brewer(type = "qualitative", palette = "Set3") +
   theme(plot.title = element_text(size = 14, face = "bold"),
@@ -680,94 +683,94 @@ graph.VaccinationIncidenceDeces <- ggplot(data = filter(dbDep,dbDep$incid_dc_7j>
         caption = "Source : Santé Publique France. Graphique : P. Aldama @paldama.")
 ggsave('grVaccinationIncidenceDeces.png', plot=graph.VaccinationIncidenceDeces,bg="white", height = 12, width = 10)
 
-##################################################################################################################################
-# Graphs et cartes par départements
-##################################################################################################################################
-
-dbsidep_dep <- read_delim("sidep_donneesincidence_dep.csv", 
-                                         ";", escape_double = FALSE, trim_ws = TRUE)
-dbsidep_dep <- dbsidep_dep %>%
-  as.data.frame() %>%
-  arrange(dep,cl_age90,jour) %>%
-  mutate(TauxIncidence=round(rollapply(P,7,sum,align='right',fill=NA)/pop*100000)) %>%
-  mutate(CroissanceHebdo=P/lag(P,7)) %>%
-  mutate(CroissanceHebdoMoy3j= rollapply(CroissanceHebdo,3,mean,align='right',fill=NA))
-  
-  
-
-dbsidep_dep$cl_age90<-as.numeric(dbsidep_dep$cl_age90)
-dbsidep_dep$classe_age <- case_when(
-  dbsidep_dep$cl_age90 == 9  ~ "0-9 ans",
-  dbsidep_dep$cl_age90 == 19  ~ "10-19 ans",
-  dbsidep_dep$cl_age90 == 29  ~ "20-29 ans",
-  dbsidep_dep$cl_age90 == 39  ~ "30-39 ans",
-  dbsidep_dep$cl_age90 == 49  ~ "40-49 ans",
-  dbsidep_dep$cl_age90 == 59  ~ "50-59 ans",
-  dbsidep_dep$cl_age90 == 69  ~ "60-69 ans",
-  dbsidep_dep$cl_age90 == 79  ~ "70-79 ans",
-  dbsidep_dep$cl_age90 == 89  ~ "80-89 ans",
-  dbsidep_dep$cl_age90 == 0  ~ "Total",
-  TRUE ~ "Plus de 90 ans" )
-
-# Graphique
-graph.HeatMapIncidence <- ggplot(data=filter(dbsidep_dep,dbsidep_dep$jour>as.character("2020-05-01") & dbsidep_dep$classe_age=="Total" & dbsidep_dep$dep<=95)) + 
-  geom_tile( aes(jour, dep, fill=TauxIncidence) ) +
-  theme_minimal() +  labs_pubr() +
-  scale_fill_viridis("Taux d'incidence",
-                     trans = scales::pseudo_log_trans(sigma = 50),
-                     option = "C") +
-  theme(plot.title = element_text(size = 18, face = "bold"),
-        plot.subtitle = element_text(size = 12),
-        panel.grid.major = element_blank(), 
-        panel.grid.minor = element_blank())+
-  labs( y = "Départements",
-        x = NULL ,
-        color = NULL,
-        title = "Taux d'incidence par département en France métropolitaine",
-        subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants",
-        caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
-print(graph.HeatMapIncidence)
-ggsave('grHeatMapIncidence.png', plot=graph.HeatMapIncidence,bg="white", height = 20, width = 15)
-
-
-# Graphique
-for (Dep in departementFr$code_departement){
-  #Dep<-"32"
-  NomDepartement = departementFr$nom_departement[departementFr$code_departement==Dep]
-  Legende <- paste("Taux d'incidence du Covid19 dans le département",Dep,"(",NomDepartement,")")
-
-  graph.TauxIncidenceDep<-ggplot(
-    data=filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age!="Total"),
-    aes(x=jour, y=TauxIncidence) ) +
-    geom_point(aes(group = classe_age, color = classe_age),
-               size = 0.5)+
-    geom_smooth(aes(group = classe_age, color = classe_age),
-                size = 0.8,
-                span = SpanParam ,
-                se = FALSE) +
-    geom_smooth(data= filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age=="Total"),
-                aes(x=jour, y=TauxIncidence),
-                method = "loess",
-                size = 1.5,
-                span = SpanParam ,
-                se = FALSE,
-                colour = "black") +
-    theme_minimal() +  labs_pubr() +
-      scale_color_brewer(type = "qualitative", palette = "Set3") +
-    theme(plot.title = element_text(size = 14, face = "bold"),
-          plot.subtitle = element_text(size = 9)) +
-    labs( y = NULL,
-          x = NULL ,
-          color = NULL,
-          title = Legende,
-          subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants, tendance LOESS en trait continu",
-          caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
-
-  #print(graph.TauxIncidenceDep)
-
-  GraphOutput <- paste("gTauxIncidenceDep",Dep,".png")
-
-  ggsave(GraphOutput, plot=graph.TauxIncidenceDep,bg="white", height = 7, width = 9)
-
-}
-
+# ##################################################################################################################################
+# # Graphs et cartes par départements
+# ##################################################################################################################################
+# 
+# dbsidep_dep <- read_delim("sidep_donneesincidence_dep.csv", 
+#                                          ";", escape_double = FALSE, trim_ws = TRUE)
+# dbsidep_dep <- dbsidep_dep %>%
+#   as.data.frame() %>%
+#   arrange(dep,cl_age90,jour) %>%
+#   mutate(TauxIncidence=round(rollapply(P,7,sum,align='right',fill=NA)/pop*100000)) %>%
+#   mutate(CroissanceHebdo=P/lag(P,7)) %>%
+#   mutate(CroissanceHebdoMoy3j= rollapply(CroissanceHebdo,3,mean,align='right',fill=NA))
+#   
+#   
+# 
+# dbsidep_dep$cl_age90<-as.numeric(dbsidep_dep$cl_age90)
+# dbsidep_dep$classe_age <- case_when(
+#   dbsidep_dep$cl_age90 == 9  ~ "0-9 ans",
+#   dbsidep_dep$cl_age90 == 19  ~ "10-19 ans",
+#   dbsidep_dep$cl_age90 == 29  ~ "20-29 ans",
+#   dbsidep_dep$cl_age90 == 39  ~ "30-39 ans",
+#   dbsidep_dep$cl_age90 == 49  ~ "40-49 ans",
+#   dbsidep_dep$cl_age90 == 59  ~ "50-59 ans",
+#   dbsidep_dep$cl_age90 == 69  ~ "60-69 ans",
+#   dbsidep_dep$cl_age90 == 79  ~ "70-79 ans",
+#   dbsidep_dep$cl_age90 == 89  ~ "80-89 ans",
+#   dbsidep_dep$cl_age90 == 0  ~ "Total",
+#   TRUE ~ "Plus de 90 ans" )
+# 
+# # Graphique
+# graph.HeatMapIncidence <- ggplot(data=filter(dbsidep_dep,dbsidep_dep$jour>as.character("2020-05-01") & dbsidep_dep$classe_age=="Total" & dbsidep_dep$dep<=95)) + 
+#   geom_tile( aes(jour, dep, fill=TauxIncidence) ) +
+#   theme_minimal() +  labs_pubr() +
+#   scale_fill_viridis("Taux d'incidence",
+#                      trans = scales::pseudo_log_trans(sigma = 50),
+#                      option = "C") +
+#   theme(plot.title = element_text(size = 18, face = "bold"),
+#         plot.subtitle = element_text(size = 12),
+#         panel.grid.major = element_blank(), 
+#         panel.grid.minor = element_blank())+
+#   labs( y = "Départements",
+#         x = NULL ,
+#         color = NULL,
+#         title = "Taux d'incidence par département en France métropolitaine",
+#         subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants",
+#         caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
+# print(graph.HeatMapIncidence)
+# ggsave('grHeatMapIncidence.png', plot=graph.HeatMapIncidence,bg="white", height = 20, width = 15)
+# 
+# 
+# # Graphique
+# for (Dep in departementFr$code_departement){
+#   #Dep<-"32"
+#   NomDepartement = departementFr$nom_departement[departementFr$code_departement==Dep]
+#   Legende <- paste("Taux d'incidence du Covid19 dans le département",Dep,"(",NomDepartement,")")
+# 
+#   graph.TauxIncidenceDep<-ggplot(
+#     data=filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age!="Total"),
+#     aes(x=jour, y=TauxIncidence) ) +
+#     geom_point(aes(group = classe_age, color = classe_age),
+#                size = 0.5)+
+#     geom_smooth(aes(group = classe_age, color = classe_age),
+#                 size = 0.8,
+#                 span = SpanParam ,
+#                 se = FALSE) +
+#     geom_smooth(data= filter(dbsidep_dep,dbsidep_dep$jour>DateDebutGraphique & dbsidep_dep$dep == Dep & dbsidep_dep$classe_age=="Total"),
+#                 aes(x=jour, y=TauxIncidence),
+#                 method = "loess",
+#                 size = 1.5,
+#                 span = SpanParam ,
+#                 se = FALSE,
+#                 colour = "black") +
+#     theme_minimal() +  labs_pubr() +
+#       scale_color_brewer(type = "qualitative", palette = "Set3") +
+#     theme(plot.title = element_text(size = 14, face = "bold"),
+#           plot.subtitle = element_text(size = 9)) +
+#     labs( y = NULL,
+#           x = NULL ,
+#           color = NULL,
+#           title = Legende,
+#           subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants, tendance LOESS en trait continu",
+#           caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
+# 
+#   #print(graph.TauxIncidenceDep)
+# 
+#   GraphOutput <- paste("gTauxIncidenceDep",Dep,".png")
+# 
+#   ggsave(GraphOutput, plot=graph.TauxIncidenceDep,bg="white", height = 7, width = 9)
+# 
+# }
+# 
