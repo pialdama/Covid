@@ -63,7 +63,6 @@ dataDREES$vac_statut_bis2 <- case_when(
 #   dataDREES$vac_statut == "Non-vaccinés" ~ "Non-vaccinés et primo dose récente")
 
 
-
 dbDREES<-dataDREES %>%
   subset(select = -c(vac_statut)) %>%
   group_by(date,vac_statut_bis2,age) %>%
@@ -139,11 +138,24 @@ ggsave("gr_vaccinationDREESAge.png", plot=graph.vaccinationDREES,bg="white", hei
 grBoxCasCovid<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-05-1") &  dbDREES$age!="0-19 ans" &  dbDREES$variable=="PCRpos_100k" ),
        aes(x=vac_statut_bis2,  y=value, fill = vac_statut_bis2)) +
   geom_boxplot(show.legend = TRUE) +
-  scale_fill_brewer(palette = "Set1") +
-  coord_flip() + theme_minimal() + labs_pubr() +
+  scale_fill_brewer(palette = "Set1",
+                    breaks=rev(c("Vaccinés : Complet avec rappel",
+                             "Vaccinés : Complet > 6 mois sans rappel",
+                             "Vaccinés : Complet < 6 mois sans rappel",
+                             "Vaccinés : Primo dose efficace",
+                             "Vaccinés : Primo dose récente",
+                             "Non-vaccinés"))  )+
+  coord_flip() +  theme_minimal() + labs_pubr() +
   facet_wrap(.~age,scales = "free",ncol=1)+
   theme(plot.title = element_text(size = 13, face = "bold"), legend.position="left") +
-  scale_x_discrete(labels = NULL, breaks = NULL) + labs(x = "") +
+  scale_x_discrete(limits=c("Vaccinés : Complet avec rappel",
+                            "Vaccinés : Complet > 6 mois sans rappel",
+                            "Vaccinés : Complet < 6 mois sans rappel",
+                            "Vaccinés : Primo dose efficace",
+                            "Vaccinés : Primo dose récente",
+                            "Non-vaccinés"),
+                   labels = NULL,
+                   breaks = NULL) + labs(x = "") +
   labs( y = NULL,
       x = NULL ,
       fill = "Statut vaccinal",
@@ -155,11 +167,24 @@ ggsave("grBoxCasCovid.png",grBoxCasCovid,bg="white",width=12)
 grBoxHosp<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-05-1") &  dbDREES$age!="0-19 ans" &  dbDREES$variable=="HC_100k" ),
        aes(x=vac_statut_bis2,  y=value, fill = vac_statut_bis2)) +
   geom_boxplot(show.legend = TRUE) +
-  scale_fill_brewer(palette = "Set1") +
-  coord_flip() + theme_minimal() + labs_pubr() +
+  scale_fill_brewer(palette = "Set1",
+                    breaks=rev(c("Vaccinés : Complet avec rappel",
+                             "Vaccinés : Complet > 6 mois sans rappel",
+                             "Vaccinés : Complet < 6 mois sans rappel",
+                             "Vaccinés : Primo dose efficace",
+                             "Vaccinés : Primo dose récente",
+                             "Non-vaccinés")) ) +
+  coord_flip() +  theme_minimal() + labs_pubr() +
   facet_wrap(.~age,scales = "free",ncol=1)+
   theme(plot.title = element_text(size = 13, face = "bold"), legend.position="left") +
-  scale_x_discrete(labels = NULL, breaks = NULL) + labs(x = "") +
+  scale_x_discrete(limits=c("Vaccinés : Complet avec rappel",
+                            "Vaccinés : Complet > 6 mois sans rappel",
+                            "Vaccinés : Complet < 6 mois sans rappel",
+                            "Vaccinés : Primo dose efficace",
+                            "Vaccinés : Primo dose récente",
+                            "Non-vaccinés"),
+                   labels = NULL,
+                   breaks = NULL) + labs(x = "") +
   labs( y = NULL,
         x = NULL ,
         fill = "Statut vaccinal",
@@ -172,15 +197,27 @@ ggsave("grBoxHosp.png",grBoxHosp,bg="white",width=12)
 grBoxRea<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-05-1") &  dbDREES$age!="0-19 ans" &  dbDREES$variable=="SC_1m" ),
        aes(x=vac_statut_bis2,  y=value, fill = vac_statut_bis2)) +
   geom_boxplot(show.legend = TRUE) +
-  scale_fill_brewer(palette = "Set1") +
-  coord_flip() + theme_minimal() + labs_pubr() +
+  scale_fill_brewer(palette = "Set1",
+                    breaks=rev(c("Vaccinés : Complet avec rappel",
+                             "Vaccinés : Complet > 6 mois sans rappel",
+                             "Vaccinés : Complet < 6 mois sans rappel",
+                             "Vaccinés : Primo dose efficace",
+                             "Vaccinés : Primo dose récente",
+                             "Non-vaccinés")) ) +
+  coord_flip() +  theme_minimal() + labs_pubr() +
   facet_wrap(.~age,scales = "free",ncol=1)+
   theme(plot.title = element_text(size = 13, face = "bold"), legend.position="left") +
-  scale_x_discrete(labels = NULL, breaks = NULL) + labs(x = "") +
+  scale_x_discrete(limits=c("Vaccinés : Complet avec rappel",
+                            "Vaccinés : Complet > 6 mois sans rappel",
+                            "Vaccinés : Complet < 6 mois sans rappel",
+                            "Vaccinés : Primo dose efficace",
+                            "Vaccinés : Primo dose récente",
+                            "Non-vaccinés"),
+                   labels = NULL,
+                   breaks = NULL) + labs(x = "") +
   labs( y = NULL,
         x = NULL ,
         fill = "Statut vaccinal",
         title = "Admissions en soins critiques pour Covid19 selon le statut vaccinal, pour 1 million de personnes",
         caption = "Source : DREES à partir des bases de données SI-DEP, SI-VIC et VAC-SI. Graphique : P. Aldama @paldama.")
 ggsave("grBoxRea.png",grBoxRea,bg="white",width=12)
-
