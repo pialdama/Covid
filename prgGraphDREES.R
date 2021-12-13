@@ -65,10 +65,9 @@ dataDREES$vac_statut_bis2 <- case_when(
 
 dbDREES<-dataDREES %>%
   subset(select = -c(vac_statut)) %>%
-  group_by(date,vac_statut_bis2,age) %>%
+  group_by(date,age,vac_statut_bis2) %>%
   summarise(across(everything(), sum)) %>%
   filter(effectif>seuilEffectif)
-
 
 
 dbDREES<-dbDREES %>%
@@ -82,12 +81,12 @@ dbDREES<-dbDREES %>%
 dbDREES<-dbDREES %>%
   as.data.frame() %>%
   arrange(vac_statut_bis2, age, date)%>%
-  mutate(PCR_100k = rollapply(PCR_100k,Moyenne,mean,align="right",fill=NA) ) %>%
-  mutate(PCRpos_100k = rollapply(PCRpos_100k,Moyenne,mean,align="right",fill=NA) ) %>%
-  mutate(HC_100k = rollapply(HC_100k,Moyenne,mean,align="right",fill=NA) ) %>%
-  mutate(HCpos_100k = rollapply(HCpos_100k,Moyenne,mean,align="right",fill=NA) ) %>%
-  mutate(SC_1m=  rollapply(SC_1m,Moyenne,mean,align="right",fill=NA) )  %>%
-  mutate(SCpos_1m = rollapply(SCpos_1m,Moyenne,mean,align="right",fill=NA) )  
+  mutate(PCR_100k = rollapply(PCR_100k,Moyenne,mean,align="right",fill=NA)*7 ) %>%
+  mutate(PCRpos_100k = rollapply(PCRpos_100k,Moyenne,mean,align="right",fill=NA)*7 ) %>%
+  mutate(HC_100k = rollapply(HC_100k,Moyenne,mean,align="right",fill=NA)*7 ) %>%
+  mutate(HCpos_100k = rollapply(HCpos_100k,Moyenne,mean,align="right",fill=NA)*7 ) %>%
+  mutate(SC_1m=  rollapply(SC_1m,Moyenne,mean,align="right",fill=NA)*7 )  %>%
+  mutate(SCpos_1m = rollapply(SCpos_1m,Moyenne,mean,align="right",fill=NA)*7 )  
 
 dbDREES<-melt(dbDREES,id.vars=1:3, measure.vars=11:16)
 
@@ -147,7 +146,6 @@ grBoxCasCovid<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-05-1") &
                              "Non-vaccinés"))  )+
   coord_flip() +  theme_minimal() + labs_pubr() +
   facet_wrap(.~age,scales = "free",ncol=1)+
-  theme(plot.title = element_text(size = 13, face = "bold"), legend.position="left") +
   scale_x_discrete(limits=c("Vaccinés : Complet avec rappel",
                             "Vaccinés : Complet > 6 mois sans rappel",
                             "Vaccinés : Complet < 6 mois sans rappel",
@@ -156,10 +154,14 @@ grBoxCasCovid<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-05-1") &
                             "Non-vaccinés"),
                    labels = NULL,
                    breaks = NULL) + labs(x = "") +
+  theme(plot.title = element_text(size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 11), 
+        legend.position="left") +
   labs( y = NULL,
       x = NULL ,
       fill = "Statut vaccinal",
-      title = "Nombre de cas de Covid selon le statut vaccinal, pour 100 000 personnes",
+      title = "Nombre de cas de Covid selon le statut vaccinal, pour 100 000 personnes/7 jours glissants",
+      subtitle = "Diagramme en boîte représentant la distribution de l'incidence au cours du temps",
       caption = "Source : DREES à partir des bases de données SI-DEP, SI-VIC et VAC-SI. Graphique : P. Aldama @paldama.")
 
 ggsave("grBoxCasCovid.png",grBoxCasCovid,bg="white",width=12)
@@ -176,7 +178,6 @@ grBoxHosp<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-05-1") &  db
                              "Non-vaccinés")) ) +
   coord_flip() +  theme_minimal() + labs_pubr() +
   facet_wrap(.~age,scales = "free",ncol=1)+
-  theme(plot.title = element_text(size = 13, face = "bold"), legend.position="left") +
   scale_x_discrete(limits=c("Vaccinés : Complet avec rappel",
                             "Vaccinés : Complet > 6 mois sans rappel",
                             "Vaccinés : Complet < 6 mois sans rappel",
@@ -185,10 +186,14 @@ grBoxHosp<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-05-1") &  db
                             "Non-vaccinés"),
                    labels = NULL,
                    breaks = NULL) + labs(x = "") +
+  theme(plot.title = element_text(size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 11), 
+        legend.position="left") +
   labs( y = NULL,
         x = NULL ,
         fill = "Statut vaccinal",
-        title = "Admissions à l'hôpital pour Covid19 selon le statut vaccinal, pour 100 000 personnes",
+        title = "Admissions à l'hôpital pour Covid19 selon le statut vaccinal, pour 100 000 personnes/7 jours glissants",
+        subtitle = "Diagramme en boîte représentant la distribution de l'incidence au cours du temps",
         caption = "Source : DREES à partir des bases de données SI-DEP, SI-VIC et VAC-SI. Graphique : P. Aldama @paldama.")
 
 ggsave("grBoxHosp.png",grBoxHosp,bg="white",width=12)
@@ -215,9 +220,13 @@ grBoxRea<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-05-1") &  dbD
                             "Non-vaccinés"),
                    labels = NULL,
                    breaks = NULL) + labs(x = "") +
+  theme(plot.title = element_text(size = 13, face = "bold"),
+        plot.subtitle = element_text(size = 11), 
+        legend.position="left") +
   labs( y = NULL,
         x = NULL ,
         fill = "Statut vaccinal",
-        title = "Admissions en soins critiques pour Covid19 selon le statut vaccinal, pour 1 million de personnes",
+        title = "Admissions en soins critiques pour Covid19 selon le statut vaccinal, pour 1 000 000 personnes/7 jours glissants",
+        subtitle = "Diagramme en boîte représentant la distribution de l'incidence au cours du temps",
         caption = "Source : DREES à partir des bases de données SI-DEP, SI-VIC et VAC-SI. Graphique : P. Aldama @paldama.")
 ggsave("grBoxRea.png",grBoxRea,bg="white",width=12)
