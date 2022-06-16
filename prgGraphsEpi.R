@@ -1,5 +1,3 @@
-
-
 library(tidyverse)
 library(dplyr)
 library(ggplot2)
@@ -59,12 +57,13 @@ departementFr <- read.csv("~/Documents/covid/departementFr.csv")
 
 
 
+
 DateDebutGraphique <- as.Date("2020-07-01")
 SpanParam<-0.1
-# DateDebutGraphique <- as.Date("2021-03-01")
-# SpanParam<-0.125
+# # DateDebutGraphique <- as.Date("2021-03-01")
+# # SpanParam<-0.125
 # DateDebutGraphique <- as.Date("2021-09-01")
-# SpanParam<-0.6
+# SpanParam<-0.3
 
 
 # Charge les donnees SPF sur les vaccins 
@@ -158,6 +157,17 @@ mutate(ReffectifRea = rea/lag(rea,7))
 # db<-db %>%
 #   filter(cl_age90 != 0)  # filtre les données France entière
 
+# ggplot(data = dbspfDep) +
+#   geom_col(aes(x=date,y=TO,fill=TO)) +
+#   geom_hline(yintercept = 1, color = "red")+
+#   facet_wrap(.~lib_reg) + theme_minimal() +
+#   scale_fill_viridis(name = "Taux d'occupation des lits en soins critiques",labels = scales::percent) +
+#   scale_y_continuous(labels = scales::percent) +labs(y=NULL,x=NULL)
+
+
+library(RColorBrewer)
+colourCount = length(unique(db$lib_reg))
+getPalette = colorRampPalette(brewer.pal(9, "Set1"))
 
 # Graphique
 graph.CasCovid<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
@@ -194,14 +204,13 @@ graph.incidence<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 
               color = "black")+
   theme_minimal() +  labs_pubr() +
   scale_color_brewer(type = "qualitative", palette = "Set3") +
-  theme(plot.title = element_text(size = 14, face = "bold"),
-        plot.subtitle = element_text(size = 9)) +
+  theme(plot.title = element_text(size = 11, face = "bold"),
+        plot.subtitle = element_text(size = 8)) +
   labs( y = NULL,
         x = NULL ,
         color = NULL,
         title = "Taux d'incidence du Covid19 par classes d'âge",
-        subtitle = "Nombre de cas positifs sur 7 jours glissants pour 100 000 habitants. En noir, le taux d'incidence pour la France entière.",
-        caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
+        subtitle = "Nombre de cas positifs sur 7 jours glissants pour 100 000 habitants. En noir, le taux d'incidence pour la France entière.")
 print(graph.incidence)
 ggsave("gIncidence.png", plot=graph.incidence,bg="white", height = 6, width = 10)
 
@@ -220,8 +229,7 @@ graph.HeatMapIncidenceClasseAge <- ggplot(data=filter(db,db$jour>DateDebutGraphi
         x = NULL ,
         fill = "Taux d'incidence",
         title = "Taux d'incidence par classes d'âge",
-        subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants",
-        caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
+        subtitle = "Nombre de cas sur 7 jours, pour 100 000 habitants")
 print(graph.HeatMapIncidenceClasseAge)
 ggsave('grHeatMapIncidenceClasseAge.png', plot=graph.HeatMapIncidenceClasseAge,bg="white",width=10)
 
@@ -243,14 +251,13 @@ graph.Reffectif<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 
   geom_hline(yintercept =1, colour = "black")+
   scale_color_brewer(type = "qualitative", palette = "Set3") +
   theme_minimal() +  labs_pubr() +
-  theme(plot.title = element_text(size = 14, face = "bold"),
-        plot.subtitle = element_text(size = 9)) +
+  theme(plot.title = element_text(size = 11, face = "bold"),
+        plot.subtitle = element_text(size = 8)) +
   labs( y = NULL,
         x = NULL ,
         color = NULL,
         title = "Taux de reproduction effectif par classe d'âge",
-        subtitle = "Ratio du nombre de cas sur 7 jours entre j et j-7. En noir, le R pour la France entière.",
-        caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
+        subtitle = "Ratio du nombre de cas sur 7 jours entre j et j-7. En noir, le R pour la France entière.")
 print(graph.Reffectif)
 ggsave("gReffectif.png", plot=graph.Reffectif,bg="white", height = 6, width = 10)
 
@@ -274,8 +281,8 @@ graph.ReffectifHosp<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90
   scale_color_brewer(type = "qualitative", palette = "Set3") +
   #facet_grid(.~classe_age) +
   theme_minimal() +  labs_pubr() +
-  theme(plot.title = element_text(size = 12, face = "bold"),
-        plot.subtitle = element_text(size = 9)) +
+  theme(plot.title = element_text(size = 11, face = "bold"),
+        plot.subtitle = element_text(size = 8)) +
   labs( y = NULL,
         x = NULL ,
         color = NULL,
@@ -304,17 +311,24 @@ graph.TauxPosSmooth<-ggplot( ) +
               color = "black") +
   theme_minimal() +  labs_pubr() +
   scale_color_brewer(type = "qualitative", palette = "Set3") +
-  theme(plot.title = element_text(size = 14, face = "bold"),
-        plot.subtitle = element_text(size = 9)) +
+  theme(plot.title = element_text(size = 11, face = "bold"),
+        plot.subtitle = element_text(size = 8)) +
   labs( y = NULL,
         x = NULL ,
         color = NULL,
         title = "Taux de positivité au Covid19 par classe d'âge",
-        subtitle = "En %, tendance LOESS en trait continu. En noir, le taux de positivité pour la France entière.",
-        caption = "Source : Santé Publique France, SI-DEP. Graphique : P. Aldama @paldama.")
+        subtitle = "En %, tendance LOESS en trait continu. En noir, le taux de positivité pour la France entière.")
 print(graph.TauxPosSmooth)
 ggsave("gTauxPos.png", plot=graph.TauxPosSmooth,bg="white", height = 6, width = 10)
 
+gCasSynthese<-ggarrange(graph.incidence,graph.Reffectif,graph.TauxPosSmooth,
+          ncol=1,
+          nrow=3,
+          legend = "bottom",
+          common.legend = TRUE,
+          labels = "auto",
+          align="hv")
+ggsave("gCasSynthese.png",plot=gCasSynthese,bg="white",height=10,width=10)
 
 # Graphique
 graph.HospitLog<-ggplot(data=filter(db,db$jour>DateDebutGraphique & cl_age90 != 0),
@@ -774,3 +788,7 @@ ggsave('grVaccinationIncidenceDeces.png', plot=graph.VaccinationIncidenceDeces,b
 # 
 # }
 # 
+
+
+
+

@@ -33,7 +33,7 @@ url <-"https://data.drees.solidarites-sante.gouv.fr/explore/dataset/covid-19-res
 dest <- "~/Documents/covid/dataDREESNational.csv"
 download.file(url,dest)
 
-seuilEffectif<-0
+seuilEffectif<-10000
 Moyenne<-7
 
 
@@ -66,21 +66,28 @@ dataDREES$vac_statut_bis2 <- case_when(
 dbDREES<-dataDREES %>%
   subset(select = -c(vac_statut)) %>%
   group_by(date,age,vac_statut_bis2) %>%
-  summarise(across(everything(), sum)) %>%
-  filter(effectif>seuilEffectif)
-
+  summarise(across(everything(), sum))  %>% 
+  rename(
+    nb_PCRpos = `nb_PCR+`,
+    HC_PCRpos = `HC_PCR+`,
+    SC_PCRpos = `SC_PCR+`
+  )
 
 dbDREES<-dbDREES %>%
   mutate(PCR_100k = 10^5*nb_PCR/effectif) %>%
-  mutate(PCRpos_100k = 10^5*`nb_PCR+`/effectif) %>%
+  mutate(PCRpos_100k = 10^5*nb_PCRpos/effectif) %>%
   mutate(HC_100k =  10^5*HC/effectif) %>%
-  mutate(HCpos_100k = 10^5*`HC_PCR+`/effectif) %>%
+  mutate(HCpos_100k = 10^5*HC_PCRpos/effectif) %>%
   mutate(SC_1m=  10^6*SC/effectif) %>%
-  mutate(SCpos_1m = 10^6*`SC_PCR+`/effectif) 
+  mutate(SCpos_1m = 10^6*SC_PCRpos/effectif) 
 
 dbDREES<-dbDREES %>%
   as.data.frame() %>%
   arrange(vac_statut_bis2, age, date)%>%
+  mutate(nb_PCR = rollapply(nb_PCR,Moyenne,mean,align="right",fill=NA)*7 ) %>%
+  mutate(nb_PCRpos = rollapply(nb_PCRpos,Moyenne,mean,align="right",fill=NA)*7 ) %>%
+  mutate(HC = rollapply(HC,Moyenne,mean,align="right",fill=NA)*7 ) %>%
+  mutate(SC = rollapply(SC,Moyenne,mean,align="right",fill=NA)*7 ) %>%
   mutate(PCR_100k = rollapply(PCR_100k,Moyenne,mean,align="right",fill=NA)*7 ) %>%
   mutate(PCRpos_100k = rollapply(PCRpos_100k,Moyenne,mean,align="right",fill=NA)*7 ) %>%
   mutate(HC_100k = rollapply(HC_100k,Moyenne,mean,align="right",fill=NA)*7 ) %>%
@@ -88,7 +95,8 @@ dbDREES<-dbDREES %>%
   mutate(SC_1m=  rollapply(SC_1m,Moyenne,mean,align="right",fill=NA)*7 )  %>%
   mutate(SCpos_1m = rollapply(SCpos_1m,Moyenne,mean,align="right",fill=NA)*7 )  
 
-dbDREES<-melt(dbDREES,id.vars=1:3, measure.vars=11:16)
+
+dbDREES<-melt(dbDREES,id.vars=c(1:3,10), measure.vars=c(4:9,11:16))
 
 dbDREES$age <- case_when(
   dbDREES$age == "[0,19]"  ~ "0-19 ans",
@@ -103,18 +111,36 @@ dbDREES$VariableName <- case_when(
   dbDREES$variable == "HC_100k"  ~ "Hospitalisations",
   dbDREES$variable == "HCpos_100k"  ~ "Hospitalisation PCR+",
   dbDREES$variable == "SC_1m"  ~ "Soins critiques",
-  dbDREES$variable == "SCpos_1m"  ~ "Soins critiques avec PCR+")
+  dbDREES$variable == "SCpos_1m"  ~ "Soins critiques avec PCR+",
+  dbDREES$variable == "nb_PCRpos"  ~ "Nombre de cas Covid+",
+  dbDREES$variable == "HC"  ~ "Hospitalisations pour Covid+",
+  dbDREES$variable == "SC"  ~ "Soins critiques pour Covid+",
+  dbDREES$variable == "nb_PCR"  ~ "Nombre de tests Covid",
+  dbDREES$variable == "HC_PCRpos"  ~ "Hospitalisations pour Covid+ avec PCR+",
+  dbDREES$variable == "SC_PCRpos"  ~ "Soins critiques pour Covid+ avec PCR+",
+)
 
+#nb_PCR nb_PCRpos HC HC_PCRpos SC SC_PCRpos PCR_100k PCRpos_100k HC_100k HCpos_100k SC_1m SCpos_1m
 
-graph.vaccinationDREES<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-08-1") &  dbDREES$age!="0-19 ans" &
-                                               dbDREES$vac_statut_bis2!="Vaccinés : Primo dose récente" & dbDREES$vac_statut_bis2!="Vaccinés : Primo dose efficace" & 
-                                               dbDREES$variable!="PCR_100k" & dbDREES$variable!="HCpos_100k" & dbDREES$variable!="SCpos_1m"  ),
+graph.vaccinationDREES<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-07-1") &
+                                               dbDREES$effectif>seuilEffectif &
+                                               dbDREES$age!="0-19 ans" &
+                                               dbDREES$vac_statut_bis2!="Vaccinés : Primo dose récente" &
+                                               dbDREES$vac_statut_bis2!="Vaccinés : Primo dose efficace" &
+                                               dbDREES$variable!="nb_PCR" &
+                                               dbDREES$variable!="HC_PCRpos" &
+                                               dbDREES$variable!="SC_PCRpos" &
+                                               dbDREES$variable!="PCR_100k" &
+                                               dbDREES$variable!="HCpos_100k" &
+                                               dbDREES$variable!="SCpos_1m"  &
+                                               dbDREES$variable!="SC_1m" &
+                                               dbDREES$variable!="HC_100k" ),
                                aes(x=date,  y=value, group = vac_statut_bis2, colour = vac_statut_bis2 )) +
-  #geom_point(size = 0.6)+
+  geom_point(size = 0.6)+
   geom_smooth(aes(fill = vac_statut_bis2),
               alpha = 0.2,
-              span = 0.5,
-              se=TRUE,
+              size = 1,
+              span = 0.25,
               inherit.aes = TRUE) +
   guides(fill = "none")  +
   facet_wrap(VariableName~age, scales = "free", ncol = 4) +
@@ -124,7 +150,8 @@ graph.vaccinationDREES<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021
   scale_fill_viridis(discrete=TRUE) +
   theme(plot.title = element_text(size = 15, face = "bold"),
         plot.subtitle = element_text(size = 12)) +
-  labs( y = "Incidence hebdomadaire pour 100 000 personnes (ou 1 million pour les soins critiques)",
+  labs( y = "Incidence hebdomadaire pour 100 000 personnes 
+  (ou 1 million pour les soins critiques)",
         x = NULL ,
         colour = "Statut vaccinal",
         title = "Nombre de cas COVID+, d'hospitalisations et de soins critiques selon le statut vaccinal",
@@ -132,6 +159,41 @@ graph.vaccinationDREES<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021
         caption = "Source : DREES à partir des bases de données SI-DEP, SI-VIC et VAC-SI. Graphique : P. Aldama @paldama.")
 size<-8
 ggsave("gr_vaccinationDREESAge.png", plot=graph.vaccinationDREES,bg="white", height = size, width = 1/0.7*size )
+
+
+
+
+graph.vaccinationDREESRepartition<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-07-1") &
+                                               dbDREES$effectif>seuilEffectif &
+                                               dbDREES$age!="0-19 ans" &
+                                               dbDREES$vac_statut_bis2!="Vaccinés : Primo dose récente" &
+                                               dbDREES$vac_statut_bis2!="Vaccinés : Primo dose efficace" &
+                                               dbDREES$variable!="nb_PCR" &
+                                               dbDREES$variable!="HC_PCRpos" &
+                                               dbDREES$variable!="SC_PCRpos" &
+                                               dbDREES$variable!="PCR_100k" &
+                                               dbDREES$variable!="HCpos_100k" &
+                                               dbDREES$variable!="SCpos_1m" &
+                                               dbDREES$variable!="PCRpos_100k" &
+                                               dbDREES$variable!="HC_100k" &
+                                               dbDREES$variable!="SC_1m" ),
+                               aes(x=date,  y=value, group = vac_statut_bis2, fill = vac_statut_bis2 )) +
+  geom_col(alpha=1, position ="fill", width = 1, show.legend = TRUE) +
+  scale_y_continuous(labels = scales::percent) +
+  facet_wrap(factor(VariableName,c("Nombre de cas Covid+", "Hospitalisations pour Covid+","Soins critiques pour Covid+"))~age, scales = "free", ncol = 4) +
+  theme_minimal() + theme(legend.position="top") +
+  theme(strip.text.x = element_text( face = "bold", size = 10)) +
+  scale_color_viridis(discrete=TRUE) +
+  scale_fill_viridis(discrete=TRUE) +
+  theme(plot.title = element_text(size = 15, face = "bold"),
+        plot.subtitle = element_text(size = 12)) +
+  labs( y = NULL,
+        x = NULL ,
+        fill = "Statut vaccinal",
+        title = "Répartition des cas COVID+, d'hospitalisations et de soins critiques selon le statut vaccinal et l'âge",
+        caption = "Source : DREES à partir des bases de données SI-DEP, SI-VIC et VAC-SI. Graphique : P. Aldama @paldama.")
+size<-8
+ggsave("gr_vaccinationDREESAgeReparition.png", plot=graph.vaccinationDREESRepartition,bg="white", height = size, width = 1/0.7*size )
 
 
 grBoxCasCovid<-ggplot(data = filter(dbDREES,dbDREES$date>=as.Date("2021-05-1") &  dbDREES$age!="0-19 ans" &  dbDREES$variable=="PCRpos_100k" ),

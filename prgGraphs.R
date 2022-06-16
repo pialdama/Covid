@@ -60,11 +60,11 @@ db2020 <- filter(db20202021,db20202021$ADEC==2020)
 db2021 <- filter(db20202021,db20202021$ADEC==2021)
 
 # Bind un dataframe complet pour 2018-2020
-db1820<-rbind.data.frame(db2018,db2019,db2020)
-db1820$AnneeDeces<-as.character(db1820$ADEC)
-db1820$MoisDeces<-format(as.Date(db1820$Date, format="%d/%m/%Y"),"(%m) %B")
-db1820$ADEC<-as.character(db1820$ADEC)
-db1820$SEXE<-fct_recode(db1820$SEXE,
+db1821<-rbind.data.frame(db2018,db2019,db2020,db2021)
+db1821$AnneeDeces<-as.character(db1821$ADEC)
+db1821$MoisDeces<-format(as.Date(db1821$Date, format="%d/%m/%Y"),"(%m) %B")
+db1821$ADEC<-as.character(db1821$ADEC)
+db1821$SEXE<-fct_recode(db1821$SEXE,
                 "Femme" = "F",
                 "Homme" = "M")
 
@@ -157,52 +157,85 @@ DecesFM$DECES<- DecesFM$DECES*DecesFM$coefredress
 ##############################################################################################
 ##############################################################################################
 
-gRepartitionAge2018<-print(ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) + 
-  geom_histogram(data=filter(db1820,db1820$ADEC==2018),
+gDensiteMortalite<-ggplot(data=db1821,aes(x=age,y=after_stat(count))) + 
+   geom_density(data=filter(db1821,db1821$ADEC==2020 | db1821$ADEC==2021),
+                aes(x=age, color= ADEC, fill=ADEC), alpha =0.3, linetype = "solid")+
+   geom_density(data=filter(db1821,db1821$ADEC!=2020 & db1821$ADEC!=2021),
+                 aes(y = after_stat(count) / (n_distinct(db1821$ADEC)-2)),
+                 size=0.5, linetype = "dotted")+
+   theme_minimal() + facet_wrap(MoisDeces~.,nrow=4,ncol=3) +
+   theme(plot.title = element_text(size = 13, face = "bold"),
+         plot.subtitle = element_text(size = 11)) +
+   labs(x = "Âge", y = "Nombre de décès",
+        fill = "Année",
+        color = "Année",
+        title = "Répartition des décès par âge selon le mois de l'année, en 2020 et 2021",
+        subtitle = "En pointillés, la répartition moyenne des décès en 2018 et 2019",
+        caption = "Source : Insee et Etat civil, Fichiers des décès quotidiens")
+ggsave("gDensiteMortalite.png",plot=gDensiteMortalite,bg='white',height=7,width=10)
+
+gRepartitionAge2018<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+  geom_histogram(data=filter(db1821,db1821$ADEC==2018),
                  aes(x=age),
                  binwidth = 1,
                  size=1.2)+
-  geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020 & db1820$ADEC!=2021),
-                aes(y = after_stat(count) / (n_distinct(db1820$ADEC)-1),linetype=SEXE, group=SEXE),
-                position = "stack",
+  geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020 & db1821$ADEC!=2021),
+                aes(y = after_stat(count) / (n_distinct(db1821$ADEC)-2),linetype=SEXE, group=SEXE),
+                #position = "stack",
                 binwidth = 1,
                 size=0.5)+
-  theme_minimal() +
-    theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
+     theme_minimal() + facet_wrap(SEXE~.) +
+     theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
   labs(title = "En 2018 et moyenne 2018-2019 en noir"))
 
 
-gRepartitionAge2019<-print(ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) + 
-  geom_histogram(data=filter(db1820,db1820$ADEC==2019),
+gRepartitionAge2019<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+  geom_histogram(data=filter(db1821,db1821$ADEC==2019),
                  aes(x=age),
                  binwidth = 1,
                  size=1.2)+
-  geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020 & db1820$ADEC!=2021),
-                aes(y = after_stat(count) / (n_distinct(db1820$ADEC)-1),linetype=SEXE, group=SEXE),
-                position = "stack",
+  geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020 & db1821$ADEC!=2021),
+                aes(y = after_stat(count) / (n_distinct(db1821$ADEC)-2),linetype=SEXE, group=SEXE),
+                #position = "stack",
                 binwidth = 1,
                 size=0.5)+
-  theme_minimal() +
-    theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
+     theme_minimal() + facet_wrap(SEXE~.) +
+     theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
   labs(title = "En 2019 et moyenne 2018-2019 en noir"))
 
-gRepartitionAge2020<-print(ggplot(data=db1820,aes(x=age,y=after_stat(count),fill=SEXE)) + 
-   geom_histogram(data=filter(db1820,db1820$ADEC==2020),
+gRepartitionAge2020<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+   geom_histogram(data=filter(db1821,db1821$ADEC==2020),
                   aes(x=age),
                   binwidth = 1,
                   size=1.2)+
-   geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020 & db1820$ADEC!=2021),
-                 aes(y = after_stat(count) / (n_distinct(db1820$ADEC)-1),linetype=SEXE, group=SEXE),
-                 position = "stack",
+   geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020 & db1821$ADEC!=2021),
+                 aes(y = after_stat(count) / (n_distinct(db1821$ADEC)-2),linetype=SEXE, group=SEXE),
+                 #position = "stack",
                  binwidth = 1,
                  size=0.5)+
-   theme_minimal() +
-   theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
+      theme_minimal() + facet_wrap(SEXE~.) +
+      theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
      labs(title = "En 2020 et moyenne 2018-2019 en noir"))
 
-figRepartitionAge<-ggarrange(gRepartitionAge2018, gRepartitionAge2019, gRepartitionAge2020 
+
+gRepartitionAge2021<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+                              geom_histogram(data=filter(db1821,db1821$ADEC==2021),
+                                             aes(x=age),
+                                             binwidth = 1,
+                                             size=1.2)+
+                              geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020 & db1821$ADEC!=2021),
+                                            aes(y = after_stat(count) / (n_distinct(db1821$ADEC)-2),linetype=SEXE, group=SEXE),
+                                            #position = "stack",
+                                            binwidth = 1,
+                                            size=0.5)+
+                              theme_minimal() + facet_wrap(SEXE~.) +
+                              theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
+                              labs(title = "En 2021 et moyenne 2018-2019 en noir"))
+
+
+figRepartitionAge<-ggarrange(gRepartitionAge2018, gRepartitionAge2019, gRepartitionAge2020, gRepartitionAge2021
                              + rremove("x.text") + font("x.text", size = 10),
-                             common.legend = TRUE, legend="bottom", ncol = 1, nrow = 3) 
+                             common.legend = TRUE, legend="bottom", ncol = 1, nrow = 4) 
 
 annotate_figure(figRepartitionAge,
                 top = text_grob("Répartition des décès par âge et selon le sexe en France",
@@ -216,10 +249,10 @@ annotate_figure(figRepartitionAge,
 ggsave("gFigRepartitionAgeSexe.png", plot=figRepartitionAge,  bg="white",height = 10, width = 8)
 
 
-gRepartitionAgeSexe<-ggplot(data=db1820,aes(x=age,after_stat(count))) +  
-   geom_histogram(data=filter(db1820,db1820$ADEC==2020),aes(x=age,fill=MoisDeces), binwidth = 1,na.rm=TRUE,size=1.2)+
-   geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020),
-                 aes(y = ..count.. / (n_distinct(db1820$ADEC)-1), linetype=MoisDeces, group=MoisDeces), 
+gRepartitionAgeSexe<-ggplot(data=db1821,aes(x=age,after_stat(count))) +  
+   geom_histogram(data=filter(db1821,db1821$ADEC==2020),aes(x=age,fill=MoisDeces), binwidth = 1,na.rm=TRUE,size=1.2)+
+   geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020),
+                 aes(y = ..count.. / (n_distinct(db1821$ADEC)-1), linetype=MoisDeces, group=MoisDeces), 
                  position  = "stack", 
                  binwidth = 1,
                  size=0.5)+   
@@ -235,14 +268,14 @@ gRepartitionAgeSexe<-ggplot(data=db1820,aes(x=age,after_stat(count))) +
 ggsave("gRepartitionAgeSexe.png", plot=gRepartitionAgeSexe, bg="white", height = 5 , width = 10)
 
 
-gRepartitionAgeSexeMois<-ggplot(data=db1820,aes(x=age,after_stat(count))) +  
-   geom_histogram(data=filter(db1820,db1820$ADEC==2020),
+gRepartitionAgeSexeMois<-ggplot(data=db1821,aes(x=age,after_stat(count))) +  
+   geom_histogram(data=filter(db1821,db1821$ADEC==2020),
                   aes(x=age, color=MoisDeces), 
                   binwidth = 1,
                   na.rm=TRUE,
                   size=1.2)+
-   geom_freqpoly(data=filter(db1820,db1820$ADEC!=2020),
-                 aes(y = ..count.. / (n_distinct(db1820$ADEC)-1)), 
+   geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020),
+                 aes(y = ..count.. / (n_distinct(db1821$ADEC)-1)), 
                  color = "black", 
                  binwidth = 1,
                  size=0.5,
@@ -267,31 +300,31 @@ ggsave("gRepartitionAgeSexeMois.png", plot=gRepartitionAgeSexeMois, bg="white", 
 ############################################################################################################
 ############################################################################################################
 
-db1820<-rbind.data.frame(db2018,db2019,db2020,db2021)
-db1820$JourMois<-format(as.Date(db1820$Date, format="%d/%m/%Y"),"%m/%d")
-db1820$JourMois<-format(as.Date(db1820$Date, format="%d/%m/%Y"),"%m/%d")
-db1820$JourMoisBis<-format(as.Date(db1820$Date, format="%d/%m/%Y"),"%b %d")
-db1820$Annee<-format(as.Date(db1820$Date, format="%d/%m/%Y"),"%Y")
+db1821<-rbind.data.frame(db2018,db2019,db2020,db2021)
+db1821$JourMois<-format(as.Date(db1821$Date, format="%d/%m/%Y"),"%m/%d")
+db1821$JourMois<-format(as.Date(db1821$Date, format="%d/%m/%Y"),"%m/%d")
+db1821$JourMoisBis<-format(as.Date(db1821$Date, format="%d/%m/%Y"),"%b %d")
+db1821$Annee<-format(as.Date(db1821$Date, format="%d/%m/%Y"),"%Y")
 
-db1820$ClasseAge <- case_when(
-   db1820$age >= 0  & db1820$age < 20  ~ "0 à 19 ans",
-   db1820$age >= 19 & db1820$age < 40  ~ "20 à 39 ans",
-   db1820$age >= 40 & db1820$age < 60  ~ "40 à 59 ans",
-   db1820$age >= 60 & db1820$age < 65  ~ "60 à 64 ans",
-   db1820$age >= 65 & db1820$age < 70  ~ "65 à 69 ans",
-   db1820$age >= 70 & db1820$age < 75  ~ "70 à 75 ans",
-   db1820$age >= 75 & db1820$age < 80  ~ "75 à 79 ans",
-   db1820$age >= 80 & db1820$age < 90  ~ "80 à 89 ans",
+db1821$ClasseAge <- case_when(
+   db1821$age >= 0  & db1821$age < 20  ~ "0 à 19 ans",
+   db1821$age >= 19 & db1821$age < 40  ~ "20 à 39 ans",
+   db1821$age >= 40 & db1821$age < 60  ~ "40 à 59 ans",
+   db1821$age >= 60 & db1821$age < 65  ~ "60 à 64 ans",
+   db1821$age >= 65 & db1821$age < 70  ~ "65 à 69 ans",
+   db1821$age >= 70 & db1821$age < 75  ~ "70 à 75 ans",
+   db1821$age >= 75 & db1821$age < 80  ~ "75 à 79 ans",
+   db1821$age >= 80 & db1821$age < 90  ~ "80 à 89 ans",
    TRUE ~ "Plus de 90 ans")
 
-db1820ClasseAge<-db1820 %>%
+db1821ClasseAge<-db1821 %>%
    group_by(Date,Annee,JourMois,ClasseAge) %>%
    summarise(DECES=n())
 
-gClasseAge<-ggplot(data=db1820ClasseAge,aes(x=JourMois, y=DECES)) +
+gClasseAge<-ggplot(data=db1821ClasseAge,aes(x=JourMois, y=DECES)) +
    geom_ma(aes(color = Annee, group = Annee), ma_fun = SMA, n = 7,size = 0.6,linetype = "solid") +
    scale_colour_manual(values = c("darkgray", "lightgray", "blue","red")) +
-   stat_smooth(data=subset(db1820ClasseAge,Annee<2020),
+   stat_smooth(data=subset(db1821ClasseAge,Annee<2020),
                aes(x=JourMois, y=DECES, group=ClasseAge),
                method="glm",
                formula = y~splines::bs(x,6),
@@ -312,11 +345,11 @@ gClasseAge<-ggplot(data=db1820ClasseAge,aes(x=JourMois, y=DECES)) +
 ggsave("gClasseAge.png", plot=gClasseAge,  bg="white",height = 10 )#, width = 1.2*10)
 
 
-db1820ClasseAgeSexe<-db1820 %>%
+db1821ClasseAgeSexe<-db1821 %>%
    group_by(Date,JourMois,Annee,ClasseAge,SEXE) %>%
    summarise(DECES=n())
 
-gClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
+gClasseAgeSexe<-ggplot(data=db1821ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
    geom_ma(aes(color = Annee, group = Annee), ma_fun = SMA, n = 7,size = 0.6,linetype = "solid") +
    # geom_smooth(aes(color = Annee, group = Annee),
    #             method="loess",
@@ -324,12 +357,12 @@ gClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
    #             se=FALSE,
    #             size = 0.6) +
    scale_colour_manual(values = c("darkgray", "lightgray", "blue","red"))  +
-   stat_summary(data=subset(db1820ClasseAgeSexe,Annee<2020),
+   stat_summary(data=subset(db1821ClasseAgeSexe,Annee<2020),
                 aes(x=JourMois, y=DECES, group = ClasseAge),
                 fun=mean, colour="black",
                 geom="line",
                 group=1) +
-   # geom_smooth(data=subset(db1820ClasseAgeSexe,Annee<2020),
+   # geom_smooth(data=subset(db1821ClasseAgeSexe,Annee<2020),
    #             aes(x=JourMois, y=DECES, group = ClasseAge),
    #             method="loess",
    #             span=0.3,
@@ -349,9 +382,9 @@ gClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
          caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
 ggsave("gClasseAgeSexe.png",plot=gClasseAgeSexe,  bg="white",height = 10 , width = 1.2*10)
 
-gTimeSeriesClasseAgeSexe<-ggplot(data=db1820ClasseAgeSexe) +
+gTimeSeriesClasseAgeSexe<-ggplot(data=db1821ClasseAgeSexe) +
    geom_ma(aes(x=Date, y=DECES), ma_fun = SMA,n=7 ,size = 0.6,color="blue", linetype="solid") +
-   # stat_smooth(data=subset(db1820ClasseAgeSexe,Annee<2020),
+   # stat_smooth(data=subset(db1821ClasseAgeSexe,Annee<2020),
    #             aes(x=Date, y=DECES),
    #             method="glm",
    #             method.args = list(family = "poisson"(link="log")),
@@ -514,7 +547,6 @@ Sentinelles$iso.date <- ISOweek2date(Sentinelles$weekTemp)
 Sentinelles$ISO.week <- date2ISOweek(Sentinelles$iso.date)
 Sentinelles <- Sentinelles %>%
   arrange(ISO.week)
-view(Sentinelles)
 
 SentinellesMerge<-Sentinelles%>%
   subset(select = c(ISO.week,inc100))
@@ -582,9 +614,7 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
   labs(x = NULL,
         y = NULL,
         title = "Mortalité hebdomadaires en France",
-        subtitle = "Nombre de décès observés et attendus en absence d'épidémie (grippale ou Covid19)",
-        caption = "Sources : Insee, fichier des décès individuels et Réseau Sentinelles pour l'incidence de syndrômes grippaux. Calculs et erreurs : P. Aldama / @paldama")
-
+        subtitle = "Nombre de décès observés et attendus en absence d'épidémie (grippale ou Covid19)")
 ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, bg="white", height = 7, width =10)
 print(gTimeSeriesPoisson)
 
@@ -597,7 +627,7 @@ dbMergeBis<- dbMerge %>%
    group_by(Annee) %>%
    mutate(ExcesMortaliteCumsum=cumsum(ExcesMortalite)) %>%
    ungroup() %>%
-   select(c(Date,ISO.week,ExcesMortaliteCumsum,WeekNum,Annee,AnneeNum))
+   subset(select = c(Date,ISO.week,ExcesMortaliteCumsum,WeekNum,Annee,AnneeNum))
 
 
 graph.ExcesMortalite<-ggplot() +
@@ -620,20 +650,23 @@ graph.ExcesMortalite<-ggplot() +
                size = 1.5,
                span=0.1)  +
    scale_y_continuous(breaks=c(0,10000,20000,30000,40000,50000,60000))+
-   scale_x_discrete(breaks = c("W01","W05","W10","W15","W20","W25","W30", "W35","W40","W45","W50") )+
+   scale_x_discrete(breaks = c("W05","W10","W15","W20","W25","W30", "W35","W40","W45","W50") )+
    geom_hline( yintercept = 0)  +
    theme_minimal() +
    theme(plot.title = element_text(size = 14, face = "bold"),
          plot.subtitle = element_text(size = 10),
          plot.caption = element_text(size = 10, face = "italic"),
-         legend.position = NULL) +
+         legend.position = "right") +
    labs(x = NULL,
         y = NULL,
         color = "Année",
         title = "Excès de mortalité en France en 2020 et 2021",
         subtitle = "La courbe jaune représente l'excès de mortalité moyen sur la période 2014-2019, principlement lié aux épidémies grippales",
-        caption = "Sources : Insee, fichier des décès individuels et Réseau Sentinelles pour l'incidence de syndrômes grippaux. Calculs et erreurs : P. Aldama / @paldama")
+        caption = "Sources : Insee, fichier des décès individuels et Réseau Sentinelles pour l'incidence de syndrômes grippaux.\nCalculs et erreurs : P. Aldama / @paldama")
 
 
-ggsave("grExcesMortalite.png",plot = graph.ExcesMortalite, bg = "white")
+ggsave("grExcesMortalite.png",plot = graph.ExcesMortalite, bg = "white", width=12)
+
+gMortalite<-ggarrange(gTimeSeriesPoisson,graph.ExcesMortalite,nrow=2)
+   ggsave("gMortalite.png",plot=gMortalite,bg="white",height=10)
 
