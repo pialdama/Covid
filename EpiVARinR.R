@@ -21,7 +21,7 @@
   library(lubridate)
   
   
-  setwd("~/Documents/Covid")
+  setwd("./")
   
   exit <- function() { invokeRestart("abort") }    
   
@@ -33,7 +33,7 @@
   
   # General data from SPF
   url <- "https://www.data.gouv.fr/fr/datasets/r/f335f9ea-86e3-4ffa-9684-93c009d5e617"
-  dest <- "~/Documents/covid/spf_donneesensemble.csv"
+  dest <- "./spf_donneesensemble.csv"
   spf<- download.file(url,dest)
   dbspf<- read_csv("spf_donneesensemble.csv")
   LastObs<-(max(dbspf$date)-3) 
@@ -500,7 +500,9 @@
   print(gEpiVAR)
    
   ######################################
-  ## IRF
+  # IRF
+  ######################################
+  
   library(devtools)
   source_url("https://raw.githubusercontent.com/anguyen1210/var-tools/master/R/extract_varirf.R")
   
@@ -512,8 +514,8 @@
              ortho = TRUE,
              cumulative = TRUE,
              boot = TRUE,
-             ci = 0.95,
-             runs = 500 )
+             ci = 0.90,
+             runs = 1000 )
   
   
   multiple_varirf <- extract_varirf(irf) %>%
@@ -525,21 +527,54 @@
       values_drop_na = TRUE
     ) %>%
     pivot_wider(names_from = type, values_from = values)
-  
+
   gIRF<-multiple_varirf %>%
     ggplot(aes(x=period, y=irf*100, ymin=lower*100, ymax=upper*100)) +
     geom_hline(yintercept = 0, color="black") +
-    geom_ribbon(fill="blue", alpha=.1) +
-    geom_line(color = "blue",size = 0.8) +
-    theme_bw() +
-    ggtitle("Fonctions impulsion-réponse du modèle EpiVAR")+
-    facet_grid(factor(impulse, levels = c("r","cas","hosp","rea","dc"))~factor(response, levels = c("r","cas","hosp","rea","dc")),scale="free")+
-    scale_y_continuous(sec.axis = sec_axis(~ . , name = "Impulsions", breaks = NULL, labels = NULL)) +
-    scale_x_continuous(sec.axis = sec_axis(~ . , name = "Réponses", breaks = NULL, labels = NULL)) +
+    geom_ribbon(aes(fill=impulse), alpha=.1) +
+    geom_line(aes(color = impulse), size = 0.8) +
+    theme_bw() + scale_color_viridis(discrete=TRUE) + scale_fill_viridis(discrete=TRUE) +
+    ggtitle("Fonctions impulsion-réponse orthogonalisées du modèle EpiVAR")+
+    facet_grid(factor(response, levels = c("r","cas","hosp","rea","dc"))~.)+
+    scale_x_continuous(sec.axis = sec_axis(~ . , name = "Réponses des variables selon les chocs", breaks = NULL, labels = NULL)) +
     theme(plot.title = element_text(size = 11,face="bold", hjust=0.5),
           axis.title.y = element_text(size=11)) +
-    labs(x = "jours",y = "écart en %" )
+    labs(x = "jours",
+         y = "écart en %",
+         caption = "Les intervalles de confiance sont les 5ème et 95ème percentiles de la distribution obtenue par boostrapp \nSource: Santé Publique France. \nModèle et calculs : P. Aldama @paldama.")
   ggsave("gIRF.png",plot=gIRF,bg="white",width=8,height = 8)
+  print(gIRF)
   
+  #################################################
+  # Forecast Error Variance Decomposition
+  #################################################
   
+  fevd <- fevd(EpiVAR,
+               n.ahead = 60)
+  fevd_df <- as.data.frame(lapply(fevd, unlist)) %>%
+    mutate(period = c(1:60) ) %>%
+    pivot_longer(
+      cols = !period,
+      names_to = c("response","impulse"),
+      names_pattern = "(.*)\\.(.*)",
+      values_to = "values",
+      values_drop_na = TRUE
+    )
+  
+  gFEVD <- fevd_df %>%
+    ggplot(aes(x=period,y=values,fill=impulse)) +
+    geom_area(stat = "identity",
+             position = "stack") +
+    theme_bw() + scale_fill_viridis(discrete = TRUE) +
+    ggtitle("Décomposition de la variance de l'erreur de prévision selon les chocs dans le modèle EpiVAR")+
+    facet_wrap(factor(response, levels = c("R","cas","hosp","rea","dc"))~.)+
+    theme(plot.title = element_text(size = 11,face="bold", hjust=0.5),
+          axis.title.y = element_text(size=11)) +
+    labs(x = "jours",
+         y = "% de la variance expliquée", 
+         fill = "Chocs",
+         caption = "Source: Santé Publique France. \nModèle et calculs : P. Aldama @paldama.")
+  print(gFEVD) 
+  
+  ggsave("gFEVD.png",plot=gFEVD,bg="white",width=8,height = 8)
   
