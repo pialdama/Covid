@@ -535,13 +535,15 @@
     geom_line(aes(color = impulse), size = 0.8) +
     theme_bw() + scale_color_viridis(discrete=TRUE) + scale_fill_viridis(discrete=TRUE) +
     ggtitle("Fonctions impulsion-réponse orthogonalisées du modèle EpiVAR")+
-    facet_grid(factor(response, levels = c("r","cas","hosp","rea","dc"))~.)+
+    facet_wrap(factor(response, levels = c("r","cas","hosp","rea","dc"))~.,scale="free")+
     scale_x_continuous(sec.axis = sec_axis(~ . , name = "Réponses des variables selon les chocs", breaks = NULL, labels = NULL)) +
     theme(plot.title = element_text(size = 11,face="bold", hjust=0.5),
           axis.title.y = element_text(size=11)) +
     labs(x = "jours",
          y = "écart en %",
-         caption = "Les intervalles de confiance sont les 5ème et 95ème percentiles de la distribution obtenue par boostrapp \nSource: Santé Publique France. \nModèle et calculs : P. Aldama @paldama.")
+         fill = "Chocs",
+         color = "Chocs",
+         caption = "Les intervalles de confiance sont les 5ème et 95ème percentiles de la distribution obtenue par boostrapp. \nSource: Santé Publique France. \nModèle et calculs : P. Aldama @paldama.")
   ggsave("gIRF.png",plot=gIRF,bg="white",width=8,height = 8)
   print(gIRF)
   
