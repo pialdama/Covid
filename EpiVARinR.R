@@ -158,7 +158,7 @@
   
   
   ####################################################
-  # Estimation full-sample
+  # Estimation et forecast full-sample
   ####################################################
   
   # Preparation du dataset
@@ -329,7 +329,7 @@
   print(gEpiVAR)
   
   ####################################################
-  # Estimation out-of-sample
+  # Estimation et forecast out-of-sample
   ####################################################
   
   # Preparation du dataset
