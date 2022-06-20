@@ -535,9 +535,10 @@
     geom_line(aes(color = impulse), size = 0.8) +
     theme_bw() + scale_color_viridis(discrete=TRUE) + scale_fill_viridis(discrete=TRUE) +
     ggtitle("Fonctions impulsion-réponse orthogonalisées du modèle EpiVAR")+
-    facet_wrap(factor(response, levels = c("r","cas","hosp","rea","dc"))~.,scale="free")+
-    scale_x_continuous(sec.axis = sec_axis(~ . , name = "Réponses des variables selon les chocs", breaks = NULL, labels = NULL)) +
-    theme(plot.title = element_text(size = 11,face="bold", hjust=0.5),
+    facet_grid(factor(impulse, levels = c("r","cas","hosp","rea","dc"))~factor(response, levels = c("r","cas","hosp","rea","dc")),scale="free")+
+    scale_x_continuous(sec.axis = sec_axis(~ . , name = "Réponses des variables", breaks = NULL, labels = NULL)) +
+    scale_y_continuous(sec.axis = sec_axis(~ . , name = "Impulsions", breaks = NULL, labels = NULL)) +
+        theme(plot.title = element_text(size = 11,face="bold", hjust=0.5),
           axis.title.y = element_text(size=11)) +
     labs(x = "jours",
          y = "écart en %",
