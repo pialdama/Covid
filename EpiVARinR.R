@@ -83,7 +83,7 @@
     theme_bw() + 
     scale_color_manual(name="",values=c("Brut"="blue",
                                         "Corrigé des jours fériés"="red")) +  
-    labs(y="R",
+    labs(y=NULL,
          x=NULL,
          title = "Nombre de cas positif sur 7 jours glissants",
          caption="Notes : correction des jours fériés d'après la méthode SPF. \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama") 
@@ -130,6 +130,7 @@
                                         "R: SPF"="black")) +
     labs(y="R",
          x=NULL,
+         title="Estimation du taux de reproduction effectif et comparaison à la mesure SPF",
          caption="Notes : calcul du R effectif à partir du package EpiEstim (mean_si = 5.5, std_si = 1.5). \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama") + 
     theme_bw() + theme(legend.position = "right")
   print(gRcompare)
