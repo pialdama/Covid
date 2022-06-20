@@ -77,9 +77,19 @@
   dbspf$pos7jAdj<-dbspf$pos_7j/dbspf$PoidsMoyen/7
   dbspf<-filter(dbspf,dbspf$date>"2020-01-01" & dbspf$date<=LastObs )
   
-  ggplot(data=dbspf) +
-    geom_line(aes(x=date,y=pos_7j/7),color="blue") +
-    geom_line(aes(x=date,y=pos7jAdj),color="red") 
+  gCorrectionJoursFeries<-ggplot(data=dbspf) +
+    geom_line(aes(x=date,y=pos_7j/7,color="Brut")) +
+    geom_line(aes(x=date,y=pos7jAdj,color="Corrigé des jours fériés")) +
+    theme_bw() + 
+    scale_color_manual(name="",values=c("Brut"="blue",
+                                        "Corrigé des jours fériés"="red")) +  
+    labs(y="R",
+         x=NULL,
+         title = "Nombre de cas positif sur 7 jours glissants",
+         caption="Notes : correction des jours fériés d'après la méthode SPF. \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama") 
+  print(gCorrectionJoursFeries)
+  ggsave("./gCorrectionJoursFeries.png", plot = gCorrectionJoursFeries, bg = "white", width = 7, height = 4)
+  
   
   # Prolongation du Reffectif
   dbspf <- dbspf %>%
@@ -111,13 +121,19 @@
   dbspf<-full_join(RestimData,dbspf)
   dbspf$REpiEstim<-dbspf$`Mean(R)`
   
-  ggplot(data=filter(dbspf,dbspf$date>"2020-07-01")) +
+  
+  gRcompare<-ggplot(data=filter(dbspf,dbspf$date>"2020-07-01")) +
     geom_line(aes(x=date,y=REpiEstim,color="R: EpiEstim"),size=1) +
     geom_line(aes(x=date,y=R, color="R: SPF"),size=1) +
     geom_hline(yintercept = 1, size=0.3)+
     scale_color_manual(name="",values=c("R: EpiEstim"="blue",
                                         "R: SPF"="black")) +
-    labs(y="R",x=NULL) + theme_bw() + theme(legend.position = "top")
+    labs(y="R",
+         x=NULL,
+         caption="Notes : calcul du R effectif à partir du package EpiEstim (mean_si = 5.5, std_si = 1.5). \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama") + 
+    theme_bw() + theme(legend.position = "right")
+  print(gRcompare)
+  ggsave("./gRcompare.png", plot = gRcompare, bg = "white", width = 7, height = 4)
     
   
   
@@ -324,7 +340,7 @@
                                                  x = 1, 
                                                  face = "italic", 
                                                  size = 10))
-  ggsave("gEpiVAR.png", plot=gEpiVAR, bg="white", width = 10, height = 8)
+  ggsave("./gEpiVAR.png", plot=gEpiVAR, bg="white", width = 10, height = 8)
   
   print(gEpiVAR)
   
@@ -495,7 +511,7 @@
                                         x = 1, 
                                         face = "italic", 
                                         size = 10))
-  ggsave("gEpiVAROutOfSample.png", plot=gEpiVAR, bg="white", width = 10, height = 8)
+  ggsave("./gEpiVAROutOfSample.png", plot=gEpiVAR, bg="white", width = 10, height = 8)
   
   print(gEpiVAR)
    
@@ -545,7 +561,7 @@
          fill = "Chocs",
          color = "Chocs",
          caption = "Les intervalles de confiance sont les 5ème et 95ème percentiles de la distribution obtenue par boostrapp. \nSource: Santé Publique France. \nModèle et calculs : P. Aldama @paldama.")
-  ggsave("gIRF.png",plot=gIRF,bg="white",width=8,height = 8)
+  ggsave("./gIRF.png",plot=gIRF,bg="white",width=8,height = 8)
   print(gIRF)
   
   #################################################
@@ -579,5 +595,5 @@
          caption = "Source: Santé Publique France. \nModèle et calculs : P. Aldama @paldama.")
   print(gFEVD) 
   
-  ggsave("gFEVD.png",plot=gFEVD,bg="white",width=8,height = 8)
+  ggsave("./gFEVD.png",plot=gFEVD,bg="white",width=8,height = 8)
   
