@@ -19,13 +19,13 @@
   library(sweep)
   library(scales)
   library(lubridate)
+  library(rstudioapi)
   
-  
-  setwd("./")
+  current_path = rstudioapi::getActiveDocumentContext()$path 
+  setwd(dirname(current_path ))
+  print( getwd() )
   
   exit <- function() { invokeRestart("abort") }    
-  
-  
   
   ####################################################
   # Telechargement et préparation des données
