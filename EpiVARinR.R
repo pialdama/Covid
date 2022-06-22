@@ -520,8 +520,9 @@
   # IRF
   ######################################
   
-  library(devtools)
-  source_url("https://raw.githubusercontent.com/anguyen1210/var-tools/master/R/extract_varirf.R")
+  download.file("https://raw.githubusercontent.com/anguyen1210/var-tools/master/R/extract_varirf.R",
+           "./extract_varirf.R")
+  source("./extract_varirf.R")
   
   
   irf<-irf(EpiVAR,
