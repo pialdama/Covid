@@ -46,25 +46,35 @@ db2019$CHAMP <- case_when(
 db2019$age<-db2019$ADEC-db2019$ANAIS
 
 # Import data for 2020-2021 from Insee
-db20202021 <- read.csv("~/Documents/Covid/DC_20202021_det.csv",sep=";")
-db20202021$Date <- as.Date(paste(db20202021$JDEC, db20202021$MDEC,db20202021$ADEC, sep = "/"),"%d/%m/%Y")
-db20202021$CHAMP <- case_when(
-   db20202021$DEPDEC=="2A" ~ "FM",
-   db20202021$DEPDEC=="2B" ~ "FM",
-   as.numeric(db20202021$DEPDEC)<900 ~"FM" ,
+db2020 <- read.csv("~/Documents/Covid/DC_2020_det.csv",sep=";")
+db2020$Date <- as.Date(paste(db2020$JDEC, db2020$MDEC,db2020$ADEC, sep = "/"),"%d/%m/%Y")
+db2020$CHAMP <- case_when(
+   db2020$DEPDEC=="2A" ~ "FM",
+   db2020$DEPDEC=="2B" ~ "FM",
+   as.numeric(db2020$DEPDEC)<900 ~"FM" ,
    TRUE ~ "OM")
-db20202021$age<-db20202021$ADEC-db20202021$ANAIS
+db2020$age<-db2020$ADEC-db2020$ANAIS
 
-# Sépare les données 2020 et 2021
-db2020 <- filter(db20202021,db20202021$ADEC==2020)
-db2021 <- filter(db20202021,db20202021$ADEC==2021)
+# Import data for 2020-2021 from Insee
+db20212022 <- read.csv("~/Documents/Covid/DC_20212022_det.csv",sep=";")
+db20212022$Date <- as.Date(paste(db20212022$JDEC, db20212022$MDEC,db20212022$ADEC, sep = "/"),"%d/%m/%Y")
+db20212022$CHAMP <- case_when(
+   db20212022$DEPDEC=="2A" ~ "FM",
+   db20212022$DEPDEC=="2B" ~ "FM",
+   as.numeric(db20212022$DEPDEC)<900 ~"FM" ,
+   TRUE ~ "OM")
+db20212022$age<-db20212022$ADEC-db20212022$ANAIS
+
+# Sépare les données 2021 et 2022
+db2021 <- filter(db20212022,db20212022$ADEC==2021)
+db2022 <- filter(db20212022,db20212022$ADEC==2022)
 
 # Bind un dataframe complet pour 2018-2020
-db1821<-rbind.data.frame(db2018,db2019,db2020,db2021)
-db1821$AnneeDeces<-as.character(db1821$ADEC)
-db1821$MoisDeces<-format(as.Date(db1821$Date, format="%d/%m/%Y"),"(%m) %B")
-db1821$ADEC<-as.character(db1821$ADEC)
-db1821$SEXE<-fct_recode(db1821$SEXE,
+db1822<-rbind.data.frame(db2018,db2019,db2020,db20212022)
+db1822$AnneeDeces<-as.character(db1822$ADEC)
+db1822$MoisDeces<-format(as.Date(db1822$Date, format="%d/%m/%Y"),"(%m) %B")
+db1822$ADEC<-as.character(db1822$ADEC)
+db1822$SEXE<-fct_recode(db1822$SEXE,
                 "Femme" = "F",
                 "Homme" = "M")
 
@@ -75,7 +85,7 @@ db1821$SEXE<-fct_recode(db1821$SEXE,
 ##############################################################################################
 
 # Charge les données pour le redressement
-dbRedress <- read.csv("~/Documents/Covid/RedressementDistance.csv",sep=";",dec=",")
+dbRedress <- read.csv("./RedressementDistance.csv",sep=";",dec=",")
 # Normalise le coefficient moyen et la variable de distance
 dbRedress$dist<-dbRedress$dist-10
 dbRedress$coefNorm <- dbRedress$coef - c(rep(1))
@@ -106,17 +116,24 @@ coef4<-model.Redressement$coefficients[[ 4 ]] # 1/(dist-10)^4
 ##############################################################################################
 
 # Creer des datafram temporaires
-DecesFM2021 <- db20202021 %>%
-   filter(db20202021$CHAMP=="FM") %>%
+DecesFM20 <- db2020 %>%
+   filter(db2020$CHAMP=="FM") %>%
    group_by(Date) %>%
    summarise(DECES = n())
-DecesFE2021 <- db20202021 %>% 
+DecesFE20 <- db2020 %>% 
+   group_by(Date) %>%
+   summarise(DECES = n())
+DecesFM2122 <- db20212022 %>%
+   filter(db20212022$CHAMP=="FM") %>%
+   group_by(Date) %>%
+   summarise(DECES = n())
+DecesFE2122 <- db20212022 %>% 
    group_by(Date) %>%
    summarise(DECES = n())
 
 # Merge historical dataset with data for 2020 and 2021 and remove intermediate data.frame
-DecesFE<-bind_rows(DecesFE,DecesFE2021)
-DecesFM<-bind_rows(DecesFM,DecesFM2021)
+DecesFE<-bind_rows(DecesFE,DecesFE20,DecesFE2122)
+DecesFM<-bind_rows(DecesFM,DecesFM20,DecesFM2122)
 rm(DecesFE2021,DecesFM2021)
 
 DecesFE$Annee<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%Y"))
@@ -157,11 +174,11 @@ DecesFM$DECES<- DecesFM$DECES*DecesFM$coefredress
 ##############################################################################################
 ##############################################################################################
 
-gDensiteMortalite<-ggplot(data=db1821,aes(x=age,y=after_stat(count))) + 
-   geom_density(data=filter(db1821,db1821$ADEC==2020 | db1821$ADEC==2021),
+gDensiteMortalite<-ggplot(data=db1822,aes(x=age,y=after_stat(count))) + 
+   geom_density(data=filter(db1822,db1822$ADEC==2020 | db1822$ADEC==2021),
                 aes(x=age, color= ADEC, fill=ADEC), alpha =0.3, linetype = "solid")+
-   geom_density(data=filter(db1821,db1821$ADEC!=2020 & db1821$ADEC!=2021),
-                 aes(y = after_stat(count) / (n_distinct(db1821$ADEC)-2)),
+   geom_density(data=filter(db1822,db1822$ADEC!=2020 & db1822$ADEC!=2021),
+                 aes(y = after_stat(count) / (n_distinct(db1822$ADEC)-2)),
                  size=0.5, linetype = "dotted")+
    theme_minimal() + facet_wrap(MoisDeces~.,nrow=4,ncol=3) +
    theme(plot.title = element_text(size = 13, face = "bold"),
@@ -174,13 +191,13 @@ gDensiteMortalite<-ggplot(data=db1821,aes(x=age,y=after_stat(count))) +
         caption = "Source : Insee et Etat civil, Fichiers des décès quotidiens")
 ggsave("gDensiteMortalite.png",plot=gDensiteMortalite,bg='white',height=7,width=10)
 
-gRepartitionAge2018<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill=SEXE)) + 
-  geom_histogram(data=filter(db1821,db1821$ADEC==2018),
+gRepartitionAge2018<-print(ggplot(data=db1822,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+  geom_histogram(data=filter(db1822,db1822$ADEC==2018),
                  aes(x=age),
                  binwidth = 1,
                  size=1.2)+
-  geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020 & db1821$ADEC!=2021),
-                aes(y = after_stat(count) / (n_distinct(db1821$ADEC)-2),linetype=SEXE, group=SEXE),
+  geom_freqpoly(data=filter(db1822,db1822$ADEC!=2020 & db1822$ADEC!=2021),
+                aes(y = after_stat(count) / (n_distinct(db1822$ADEC)-2),linetype=SEXE, group=SEXE),
                 #position = "stack",
                 binwidth = 1,
                 size=0.5)+
@@ -189,13 +206,13 @@ gRepartitionAge2018<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill
   labs(title = "En 2018 et moyenne 2018-2019 en noir"))
 
 
-gRepartitionAge2019<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill=SEXE)) + 
-  geom_histogram(data=filter(db1821,db1821$ADEC==2019),
+gRepartitionAge2019<-print(ggplot(data=db1822,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+  geom_histogram(data=filter(db1822,db1822$ADEC==2019),
                  aes(x=age),
                  binwidth = 1,
                  size=1.2)+
-  geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020 & db1821$ADEC!=2021),
-                aes(y = after_stat(count) / (n_distinct(db1821$ADEC)-2),linetype=SEXE, group=SEXE),
+  geom_freqpoly(data=filter(db1822,db1822$ADEC!=2020 & db1822$ADEC!=2021),
+                aes(y = after_stat(count) / (n_distinct(db1822$ADEC)-2),linetype=SEXE, group=SEXE),
                 #position = "stack",
                 binwidth = 1,
                 size=0.5)+
@@ -203,13 +220,13 @@ gRepartitionAge2019<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill
      theme(plot.title = element_text(size = 11)) +  labs(x = NULL, y = NULL) + 
   labs(title = "En 2019 et moyenne 2018-2019 en noir"))
 
-gRepartitionAge2020<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill=SEXE)) + 
-   geom_histogram(data=filter(db1821,db1821$ADEC==2020),
+gRepartitionAge2020<-print(ggplot(data=db1822,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+   geom_histogram(data=filter(db1822,db1822$ADEC==2020),
                   aes(x=age),
                   binwidth = 1,
                   size=1.2)+
-   geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020 & db1821$ADEC!=2021),
-                 aes(y = after_stat(count) / (n_distinct(db1821$ADEC)-2),linetype=SEXE, group=SEXE),
+   geom_freqpoly(data=filter(db1822,db1822$ADEC!=2020 & db1822$ADEC!=2021),
+                 aes(y = after_stat(count) / (n_distinct(db1822$ADEC)-2),linetype=SEXE, group=SEXE),
                  #position = "stack",
                  binwidth = 1,
                  size=0.5)+
@@ -218,13 +235,13 @@ gRepartitionAge2020<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill
      labs(title = "En 2020 et moyenne 2018-2019 en noir"))
 
 
-gRepartitionAge2021<-print(ggplot(data=db1821,aes(x=age,y=after_stat(count),fill=SEXE)) + 
-                              geom_histogram(data=filter(db1821,db1821$ADEC==2021),
+gRepartitionAge2021<-print(ggplot(data=db1822,aes(x=age,y=after_stat(count),fill=SEXE)) + 
+                              geom_histogram(data=filter(db1822,db1822$ADEC==2021),
                                              aes(x=age),
                                              binwidth = 1,
                                              size=1.2)+
-                              geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020 & db1821$ADEC!=2021),
-                                            aes(y = after_stat(count) / (n_distinct(db1821$ADEC)-2),linetype=SEXE, group=SEXE),
+                              geom_freqpoly(data=filter(db1822,db1822$ADEC!=2020 & db1822$ADEC!=2021),
+                                            aes(y = after_stat(count) / (n_distinct(db1822$ADEC)-2),linetype=SEXE, group=SEXE),
                                             #position = "stack",
                                             binwidth = 1,
                                             size=0.5)+
@@ -249,10 +266,10 @@ annotate_figure(figRepartitionAge,
 ggsave("gFigRepartitionAgeSexe.png", plot=figRepartitionAge,  bg="white",height = 10, width = 8)
 
 
-gRepartitionAgeSexe<-ggplot(data=db1821,aes(x=age,after_stat(count))) +  
-   geom_histogram(data=filter(db1821,db1821$ADEC==2020),aes(x=age,fill=MoisDeces), binwidth = 1,na.rm=TRUE,size=1.2)+
-   geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020),
-                 aes(y = ..count.. / (n_distinct(db1821$ADEC)-1), linetype=MoisDeces, group=MoisDeces), 
+gRepartitionAgeSexe<-ggplot(data=db1822,aes(x=age,after_stat(count))) +  
+   geom_histogram(data=filter(db1822,db1822$ADEC==2020),aes(x=age,fill=MoisDeces), binwidth = 1,na.rm=TRUE,size=1.2)+
+   geom_freqpoly(data=filter(db1822,db1822$ADEC!=2020),
+                 aes(y = ..count.. / (n_distinct(db1822$ADEC)-1), linetype=MoisDeces, group=MoisDeces), 
                  position  = "stack", 
                  binwidth = 1,
                  size=0.5)+   
@@ -268,14 +285,14 @@ gRepartitionAgeSexe<-ggplot(data=db1821,aes(x=age,after_stat(count))) +
 ggsave("gRepartitionAgeSexe.png", plot=gRepartitionAgeSexe, bg="white", height = 5 , width = 10)
 
 
-gRepartitionAgeSexeMois<-ggplot(data=db1821,aes(x=age,after_stat(count))) +  
-   geom_histogram(data=filter(db1821,db1821$ADEC==2020),
+gRepartitionAgeSexeMois<-ggplot(data=db1822,aes(x=age,after_stat(count))) +  
+   geom_histogram(data=filter(db1822,db1822$ADEC==2020),
                   aes(x=age, color=MoisDeces), 
                   binwidth = 1,
                   na.rm=TRUE,
                   size=1.2)+
-   geom_freqpoly(data=filter(db1821,db1821$ADEC!=2020),
-                 aes(y = ..count.. / (n_distinct(db1821$ADEC)-1)), 
+   geom_freqpoly(data=filter(db1822,db1822$ADEC!=2020),
+                 aes(y = ..count.. / (n_distinct(db1822$ADEC)-1)), 
                  color = "black", 
                  binwidth = 1,
                  size=0.5,
@@ -300,31 +317,31 @@ ggsave("gRepartitionAgeSexeMois.png", plot=gRepartitionAgeSexeMois, bg="white", 
 ############################################################################################################
 ############################################################################################################
 
-db1821<-rbind.data.frame(db2018,db2019,db2020,db2021)
-db1821$JourMois<-format(as.Date(db1821$Date, format="%d/%m/%Y"),"%m/%d")
-db1821$JourMois<-format(as.Date(db1821$Date, format="%d/%m/%Y"),"%m/%d")
-db1821$JourMoisBis<-format(as.Date(db1821$Date, format="%d/%m/%Y"),"%b %d")
-db1821$Annee<-format(as.Date(db1821$Date, format="%d/%m/%Y"),"%Y")
+db1822<-rbind.data.frame(db2018,db2019,db2020,db2021,db2022)
+db1822$JourMois<-format(as.Date(db1822$Date, format="%d/%m/%Y"),"%m/%d")
+db1822$JourMois<-format(as.Date(db1822$Date, format="%d/%m/%Y"),"%m/%d")
+db1822$JourMoisBis<-format(as.Date(db1822$Date, format="%d/%m/%Y"),"%b %d")
+db1822$Annee<-format(as.Date(db1822$Date, format="%d/%m/%Y"),"%Y")
 
-db1821$ClasseAge <- case_when(
-   db1821$age >= 0  & db1821$age < 20  ~ "0 à 19 ans",
-   db1821$age >= 19 & db1821$age < 40  ~ "20 à 39 ans",
-   db1821$age >= 40 & db1821$age < 60  ~ "40 à 59 ans",
-   db1821$age >= 60 & db1821$age < 65  ~ "60 à 64 ans",
-   db1821$age >= 65 & db1821$age < 70  ~ "65 à 69 ans",
-   db1821$age >= 70 & db1821$age < 75  ~ "70 à 75 ans",
-   db1821$age >= 75 & db1821$age < 80  ~ "75 à 79 ans",
-   db1821$age >= 80 & db1821$age < 90  ~ "80 à 89 ans",
+db1822$ClasseAge <- case_when(
+   db1822$age >= 0  & db1822$age < 20  ~ "0 à 19 ans",
+   db1822$age >= 19 & db1822$age < 40  ~ "20 à 39 ans",
+   db1822$age >= 40 & db1822$age < 60  ~ "40 à 59 ans",
+   db1822$age >= 60 & db1822$age < 65  ~ "60 à 64 ans",
+   db1822$age >= 65 & db1822$age < 70  ~ "65 à 69 ans",
+   db1822$age >= 70 & db1822$age < 75  ~ "70 à 75 ans",
+   db1822$age >= 75 & db1822$age < 80  ~ "75 à 79 ans",
+   db1822$age >= 80 & db1822$age < 90  ~ "80 à 89 ans",
    TRUE ~ "Plus de 90 ans")
 
-db1821ClasseAge<-db1821 %>%
+db1822ClasseAge<-db1822 %>%
    group_by(Date,Annee,JourMois,ClasseAge) %>%
    summarise(DECES=n())
 
-gClasseAge<-ggplot(data=db1821ClasseAge,aes(x=JourMois, y=DECES)) +
+gClasseAge<-ggplot(data=db1822ClasseAge,aes(x=JourMois, y=DECES)) +
    geom_ma(aes(color = Annee, group = Annee), ma_fun = SMA, n = 7,size = 0.6,linetype = "solid") +
    scale_colour_manual(values = c("darkgray", "lightgray", "blue","red")) +
-   stat_smooth(data=subset(db1821ClasseAge,Annee<2020),
+   stat_smooth(data=subset(db1822ClasseAge,Annee<2020),
                aes(x=JourMois, y=DECES, group=ClasseAge),
                method="glm",
                formula = y~splines::bs(x,6),
@@ -345,11 +362,11 @@ gClasseAge<-ggplot(data=db1821ClasseAge,aes(x=JourMois, y=DECES)) +
 ggsave("gClasseAge.png", plot=gClasseAge,  bg="white",height = 10 )#, width = 1.2*10)
 
 
-db1821ClasseAgeSexe<-db1821 %>%
+db1822ClasseAgeSexe<-db1822 %>%
    group_by(Date,JourMois,Annee,ClasseAge,SEXE) %>%
    summarise(DECES=n())
 
-gClasseAgeSexe<-ggplot(data=db1821ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
+gClasseAgeSexe<-ggplot(data=db1822ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
    geom_ma(aes(color = Annee, group = Annee), ma_fun = SMA, n = 7,size = 0.6,linetype = "solid") +
    # geom_smooth(aes(color = Annee, group = Annee),
    #             method="loess",
@@ -357,12 +374,12 @@ gClasseAgeSexe<-ggplot(data=db1821ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
    #             se=FALSE,
    #             size = 0.6) +
    scale_colour_manual(values = c("darkgray", "lightgray", "blue","red"))  +
-   stat_summary(data=subset(db1821ClasseAgeSexe,Annee<2020),
+   stat_summary(data=subset(db1822ClasseAgeSexe,Annee<2020),
                 aes(x=JourMois, y=DECES, group = ClasseAge),
                 fun=mean, colour="black",
                 geom="line",
                 group=1) +
-   # geom_smooth(data=subset(db1821ClasseAgeSexe,Annee<2020),
+   # geom_smooth(data=subset(db1822ClasseAgeSexe,Annee<2020),
    #             aes(x=JourMois, y=DECES, group = ClasseAge),
    #             method="loess",
    #             span=0.3,
@@ -382,9 +399,9 @@ gClasseAgeSexe<-ggplot(data=db1821ClasseAgeSexe,aes(x=JourMois, y=DECES)) +
          caption = "Source : Insee, fichier des décès individuels. Calculs : @paldama.")
 ggsave("gClasseAgeSexe.png",plot=gClasseAgeSexe,  bg="white",height = 10 , width = 1.2*10)
 
-gTimeSeriesClasseAgeSexe<-ggplot(data=db1821ClasseAgeSexe) +
+gTimeSeriesClasseAgeSexe<-ggplot(data=db1822ClasseAgeSexe) +
    geom_ma(aes(x=Date, y=DECES), ma_fun = SMA,n=7 ,size = 0.6,color="blue", linetype="solid") +
-   # stat_smooth(data=subset(db1821ClasseAgeSexe,Annee<2020),
+   # stat_smooth(data=subset(db1822ClasseAgeSexe,Annee<2020),
    #             aes(x=Date, y=DECES),
    #             method="glm",
    #             method.args = list(family = "poisson"(link="log")),
@@ -418,7 +435,7 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
    # geom_ribbon(data=filter(DecesFM,DecesFM$Annee>=2000 & DecesFM$Annee!=2003  & DecesFM$Annee!=2020 & DecesFM$Annee!=2021 ),
    #             aes(ymin = min(DECES), ymax = max(DECES)), 
    #             alpha=.5, fill="gray") +
-   geom_line(data=filter(DecesFM,DecesFM$Annee>=2000 & DecesFM$Annee!=2003  & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
+   geom_line(data=filter(DecesFM,DecesFM$Annee>=2000 & DecesFM$Annee!=2003  & DecesFM$Annee!=2020 & DecesFM$Annee!=2021 & DecesFM$Annee!=2022),
            aes(group=Annee),
            linetype = "solid",
            color="gray",
@@ -431,8 +448,8 @@ gTimeSeriesTransversal<-ggplot(data=filter(DecesFM,DecesFM$Annee>=2000),aes(x=Jo
            aes(color = Annee, group = Annee),
            linetype = "solid",
            size = 1) +
-   scale_colour_manual(values = c("orange","blue","red"))  +
-   stat_summary(data=filter(DecesFM,DecesFM$Annee>=2016 & DecesFM$Annee!=2020 & DecesFM$Annee!=2021),
+   scale_colour_manual(values = c("orange","blue","red","green"))  +
+   stat_summary(data=filter(DecesFM,DecesFM$Annee>=2016 & DecesFM$Annee<2020 ),
                 aes(y = DECES,group=1), 
                 fun=mean, colour="black", 
                 geom="line",
@@ -526,7 +543,7 @@ gTimeSeriesLongTerme<-ggplot(data=filter(DecesFM,DecesFM$Annee>=1968),aes(x=Jour
         caption = " Source : Insee, fichier des décès individuels. Calculs : @paldama")
 ggsave("gTimeSeriesLongTerme.png",plot=gTimeSeriesLongTerme, bg="white", height = 4 , width =8)
 
-
+print(gTimeSeriesLongTerme)
 ##############################################################################################
 ##############################################################################################
 # Aggregation hebdo et estimation de la tendance hors-épidémie
