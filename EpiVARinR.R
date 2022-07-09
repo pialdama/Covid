@@ -183,6 +183,7 @@
   ConfidenceLevel <- 0.9
   
   # Preparation du dataset
+  OutofSample<-0
   HorizonForecast<-7*(2)
   LengthGraph <- 3*30 # longueur des graphiques
   
