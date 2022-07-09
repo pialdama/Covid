@@ -178,12 +178,15 @@
   # Estimation et forecast full-sample
   ####################################################
   
+  # Parametres: NB de lags du VAR et niveau de l'intervalle de confiance pour la prevision
+  nlags<-14
+  ConfidenceLevel <- 0.9
+  
   # Preparation du dataset
   k<-0
   OutofSample<-7*k
   HorizonForecast<-7*2+k
   LengthGraph <- 3*30 # longueur des graphiques
-  ConfidenceLevel <- 0.95
   
   dateFcst<-seq(from = as.Date(LastObs-OutofSample+1), to = as.Date(LastObs-OutofSample+HorizonForecast), by = 'day')
   debFcst<-LastObs-OutofSample
@@ -202,7 +205,7 @@
   
   # Estimation VAR
   EpiVAR<-VAR(DataEpiVAR,
-              p=21,
+              p=nlags,
               type="trend")
   summary(EpiVAR)
   
@@ -354,7 +357,6 @@
   OutofSample<-7*k
   HorizonForecast<-7*2+k
   LengthGraph <- 1*30 # longueur des graphiques
-  ConfidenceLevel <- 0.95
   
   dateFcst<-seq(from = as.Date(LastObs-OutofSample+1), to = as.Date(LastObs-OutofSample+HorizonForecast), by = 'day')
   debFcst<-LastObs-OutofSample
@@ -373,7 +375,7 @@
   
   # Estimation VAR
   EpiVAR<-VAR(DataEpiVAR,
-              p=21,
+              p=nlags,
               type="trend")
   summary(EpiVAR)
   
