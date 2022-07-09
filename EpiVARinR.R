@@ -183,9 +183,7 @@
   ConfidenceLevel <- 0.9
   
   # Preparation du dataset
-  k<-0
-  OutofSample<-7*k
-  HorizonForecast<-7*2+k
+  HorizonForecast<-7*(2)
   LengthGraph <- 3*30 # longueur des graphiques
   
   dateFcst<-seq(from = as.Date(LastObs-OutofSample+1), to = as.Date(LastObs-OutofSample+HorizonForecast), by = 'day')
@@ -355,7 +353,7 @@
   # Preparation du dataset
   k<-2
   OutofSample<-7*k
-  HorizonForecast<-7*2+k
+  HorizonForecast<-7*k
   LengthGraph <- 1*30 # longueur des graphiques
   
   dateFcst<-seq(from = as.Date(LastObs-OutofSample+1), to = as.Date(LastObs-OutofSample+HorizonForecast), by = 'day')
