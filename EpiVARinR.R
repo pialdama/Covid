@@ -77,9 +77,10 @@
   dbspf$pos7jAdj<-dbspf$pos_7j/dbspf$PoidsMoyen/7
   dbspf<-filter(dbspf,dbspf$date>"2020-01-01" & dbspf$date<=LastObs )
   
-  gCorrectionJoursFeries<-ggplot(data=dbspf) +
+  gCorrectionJoursFeries<-ggplot(data=filter(dbspf,dbspf$date>="2022-06-01")) +
     geom_line(aes(x=date,y=pos_7j/7,color="Brut")) +
     geom_line(aes(x=date,y=pos7jAdj,color="Corrigé des jours fériés")) +
+    scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3) ) + 
     theme_bw() + 
     scale_color_manual(name="",values=c("Brut"="blue",
                                         "Corrigé des jours fériés"="red")) +  
@@ -355,7 +356,7 @@
   k<-2
   OutofSample<-7*k
   HorizonForecast<-7*k
-  LengthGraph <- 1*30 # longueur des graphiques
+  LengthGraph <- 2*30 # longueur des graphiques
   
   dateFcst<-seq(from = as.Date(LastObs-OutofSample+1), to = as.Date(LastObs-OutofSample+HorizonForecast), by = 'day')
   debFcst<-LastObs-OutofSample
