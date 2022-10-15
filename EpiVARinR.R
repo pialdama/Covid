@@ -146,29 +146,34 @@
   # Lissage
   db$index<-1:nrow(db)
   
-  db$cas<-I(db$pos)
-  db$cas_sm<-rollapply(db$cas,7,mean,align="right",fill=NA)/db$PoidsMoyen
+  db <- db %>%
+    mutate(posmean = rollapply(pos,7,mean,align="right",fill=NA)) %>%
+    mutate(hospmean = rollapply(hosp,7,mean,align="right",fill=NA)) %>%
+    mutate(reamean = rollapply(rea,7,mean,align="right",fill=NA)) %>%
+    mutate(incid_dchospmean = rollapply(incid_dchosp,7,mean,align="right",fill=NA)) 
+    
+  db$cas<-db$pos
+  db$cas_sm<-rollapply(db$posmean,7,mean,align="right",fill=NA)/db$PoidsMoyen
   cas_sm_model<-loess(cas_sm ~ index,data = db ,span=0.05)
   db$cas_sm<-predict(cas_sm_model,newdata = db,na.action = na.exclude)
   ggplot(data=db) + 
     geom_point(aes(x=date,y=cas),color = "black") + 
     geom_line(aes(x=date,y=cas_sm),color = "red") 
   
-  hosp_sm_model<-loess(hosp ~ index,data = db ,span=0.05)
+  hosp_sm_model<-loess(hospmean ~ index,data = db ,span=0.05)
   db$hosp_sm<-predict(hosp_sm_model,newdata = db, na.action = na.exclude)
   ggplot(data=db) + 
     geom_point(aes(x=date,y=hosp),color = "black") + 
     geom_line(aes(x=date,y=hosp_sm),color = "red")
   
-  rea_sm_model<-loess(rea ~ index,data = db ,span=0.05)
+  rea_sm_model<-loess(reamean ~ index,data = db ,span=0.05)
   db$rea_sm<-predict(rea_sm_model,newdata = db, na.action = na.exclude)
   ggplot(data=db) + 
-    geom_point(aes(x=date,y=rea),color = "black") + 
+    geom_point(aes(x=date,y=reamean),color = "black") + 
     geom_line(aes(x=date,y=rea_sm),color = "red")
   
-  db$dc <- db$incid_dchosp
-  db$incid_dchosp_sm<-rollapply(db$incid_dchosp,7,mean,align="right",fill=NA)
-  dc_sm_model<-loess(incid_dchosp_sm ~ index,data = db ,span=0.05)
+  db$dc <- db$incid_dchospmean
+  dc_sm_model<-loess(dc ~ index,data = db ,span=0.05)
   db$dc_sm<-predict(dc_sm_model,newdata = db, na.action = na.exclude)
   ggplot(data=db) + 
     geom_point(aes(x=date,y=dc),color = "black") + 
@@ -600,4 +605,6 @@
   print(gFEVD) 
   
   ggsave("./gFEVD.png",plot=gFEVD,bg="white",width=8,height = 8)
+  
+
   
