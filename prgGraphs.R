@@ -127,7 +127,6 @@ DecesFE2122 <- db20212022 %>%
 # Merge historical dataset with data for 2020 and 2021 and remove intermediate data.frame
 DecesFE<-bind_rows(DecesFE,DecesFE20,DecesFE2122)
 DecesFM<-bind_rows(DecesFM,DecesFM20,DecesFM2122)
-rm(DecesFE2021,DecesFM2021)
 
 DecesFE$Annee<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%Y"))
 DecesFE$Mois<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%m"))
@@ -215,7 +214,7 @@ dbMerge$t<-c(1:nrow(dbMerge))
 dbMerge$cose<-cos(2*pi*dbMerge$t/52)
 dbMerge$sine<-sin(2*pi*dbMerge$t/52)
 ModelPoissonBis<-glm( 
-   DECES ~ t + cose + sine + inc100:Annee + incid_dchosp,
+   DECES ~ t + cose + sine + inc100:Annee + lead(incid_dchosp,1),
    data = filter(dbMerge,dbMerge$Annee >= 2014 & dbMerge$Annee <= 2022),
    family = quasipoisson(link="log"),
    control = list(maxit = 500))
@@ -232,7 +231,7 @@ coefTrend<-ModelPoissonBis$coefficients[[ 2 ]]
 coefCos<-ModelPoissonBis$coefficients[[ 3 ]] 
 coefSin<-ModelPoissonBis$coefficients[[ 4 ]] 
 dbMerge$DecesAttendus <- exp((coefIntercept + coefTrend*dbMerge$t + coefCos*dbMerge$cose + coefSin*dbMerge$sine))
-dbMerge$DecesCovid <- dbMerge$DecesAttendus + dbMerge$incid_dchosp
+dbMerge$DecesCovid <- dbMerge$DecesAttendus + lead(dbMerge$incid_dchosp)
 dbMerge$DecesAttendusSE <- sqrt(phiPoisson*dbMerge$DecesAttendus )
 
 
@@ -314,4 +313,4 @@ graph.ExcesMortalite<-ggplot() +
 ggsave("grExcesMortalite.png",plot = graph.ExcesMortalite, bg = "white", width=12)
 
 gMortalite<-ggarrange(gTimeSeriesPoisson,graph.ExcesMortalite,nrow=2)
-ggsave("gMortalite.png",plot=gMortalite,bg="white",height=10)
+ggsave("gMortalite.png",plot=gMortalite,bg="white",height=10, width=9)

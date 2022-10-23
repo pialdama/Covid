@@ -21,9 +21,8 @@ url <- "https://www.data.gouv.fr/fr/datasets/r/08c18e08-6780-452d-9b8c-ae244ad52
 dest <- "./sivic_donneeshospit.csv"
 sivic<- download.file(url,dest)
 
-
 # Insee data on mortality for 2020/2021/2022
 url<-"http://www.insee.fr/fr/statistiques/fichier/4487988/2022-09-30_detail.zip"
-dest<-"./dataMortatility.zip"
+dest<-"./dataMortality.zip"
 download.file(url, dest)
-unzip("./dataMortatility.zip")
+
