@@ -74,12 +74,12 @@
   )
   
   dbspf$PoidsMoyen<-rollapply(dbspf$PoidsAdj,7,sum,align="right",fill=NA)
-  dbspf$pos7jAdj<-dbspf$pos_7j/dbspf$PoidsMoyen/7
+  dbspf$posAdj<-dbspf$pos_7j/dbspf$PoidsMoyen/7
   dbspf<-filter(dbspf,dbspf$date>"2020-01-01" & dbspf$date<=LastObs )
   
   gCorrectionJoursFeries<-ggplot(data=filter(dbspf,dbspf$date>="2022-06-01")) +
     geom_line(aes(x=date,y=pos_7j/7,color="Brut")) +
-    geom_line(aes(x=date,y=pos7jAdj,color="Corrigé des jours fériés")) +
+    geom_line(aes(x=date,y=posAdj,color="Corrigé des jours fériés")) +
     scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3) ) + 
     theme_bw() + 
     scale_color_manual(name="",values=c("Brut"="blue",
@@ -99,8 +99,8 @@
   
   library(EpiEstim)
   incid<-dbspf%>%
-    subset(select = c(date,pos7jAdj) )%>%
-    rename(I = pos7jAdj)%>%
+    subset(select = c(date,posAdj) )%>%
+    rename(I = posAdj)%>%
     rename(dates = date) %>%
     na.omit()
   incid$index<-1:nrow(incid)
@@ -146,18 +146,19 @@
   # Lissage
   db$index<-1:nrow(db)
   
+  paramAlign <- "right"
+  
   db <- db %>%
-    mutate(posmean = rollapply(pos,7,mean,align="right",fill=NA)) %>%
-    mutate(hospmean = rollapply(hosp,7,mean,align="right",fill=NA)) %>%
-    mutate(reamean = rollapply(rea,7,mean,align="right",fill=NA)) %>%
-    mutate(incid_dchospmean = rollapply(incid_dchosp,7,mean,align="right",fill=NA)) 
+    mutate(hospmean = rollapply(hosp,7,sum,align=paramAlign,fill=NA)/7) %>%
+    mutate(reamean = rollapply(rea,7,sum,align=paramAlign,fill=NA)/7) %>%
+    mutate(incid_dchospmean = rollapply(incid_dchosp,7,sum,align=paramAlign,fill=NA)/7) 
     
   db$cas<-db$pos
-  db$cas_sm<-rollapply(db$posmean,7,mean,align="right",fill=NA)/db$PoidsMoyen
+  db$cas_sm<-db$posAdj
   cas_sm_model<-loess(cas_sm ~ index,data = db ,span=0.05)
   db$cas_sm<-predict(cas_sm_model,newdata = db,na.action = na.exclude)
   ggplot(data=db) + 
-    geom_point(aes(x=date,y=cas),color = "black") + 
+    geom_point(aes(x=date,y=posAdj),color = "black") + 
     geom_line(aes(x=date,y=cas_sm),color = "red") 
   
   hosp_sm_model<-loess(hospmean ~ index,data = db ,span=0.05)
@@ -192,6 +193,8 @@
   OutofSample<-0
   HorizonForecast<-7*(2)
   LengthGraph <- 3*30 # longueur des graphiques
+  
+  LastObs<-LastObs-3
   
   dateFcst<-seq(from = as.Date(LastObs-OutofSample+1), to = as.Date(LastObs-OutofSample+HorizonForecast), by = 'day')
   debFcst<-LastObs-OutofSample
@@ -349,7 +352,7 @@
                                                  x = 1, 
                                                  face = "italic", 
                                                  size = 10))
-  ggsave("./gEpiVAR.png", plot=gEpiVAR, bg="white", width = 10, height = 8)
+  ggsave("./gEpiVAR.png", plot=gEpiVAR, bg="white", width = 7, height = 10)
   
   print(gEpiVAR)
   
@@ -360,7 +363,7 @@
   # Preparation du dataset
   k<-2
   OutofSample<-7*k
-  HorizonForecast<-7*k
+  HorizonForecast<-7*k+3
   LengthGraph <- 2*30 # longueur des graphiques
   
   dateFcst<-seq(from = as.Date(LastObs-OutofSample+1), to = as.Date(LastObs-OutofSample+HorizonForecast), by = 'day')
@@ -519,7 +522,7 @@
                                         x = 1, 
                                         face = "italic", 
                                         size = 10))
-  ggsave("./gEpiVAROutOfSample.png", plot=gEpiVAR, bg="white", width = 10, height = 8)
+  ggsave("./gEpiVAROutOfSample.png", plot=gEpiVAR, bg="white", width = 7, height = 10)
   
   print(gEpiVAR)
    
