@@ -506,7 +506,7 @@
   
   TitleGraph = paste("Projection EpiVAR à partir du ",FirstDayFcst," (Dernier point observé : ",LastObs,")\n",sep="")
   
-  gEpiVAR<-ggarrange(gR,gcas,ghosp,grea,gdc,
+  gEpiVARos<-ggarrange(gR,gcas,ghosp,grea,gdc,
                      ncol=2,
                      nrow=3,
                      legend = "bottom",
@@ -522,10 +522,10 @@
                                         x = 1, 
                                         face = "italic", 
                                         size = 10))
-  ggsave("./gEpiVAROutOfSample.png", plot=gEpiVAR, bg="white", width = 7, height = 10)
+  ggsave("./gEpiVAROutOfSample.png", plot=gEpiVARos, bg="white", width = 7, height = 10)
   
-  print(gEpiVAR)
-   
+  print(gEpiVARos)
+  
   ######################################
   # IRF
   ######################################
