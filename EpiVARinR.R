@@ -19,7 +19,7 @@
   library(sweep)
   library(scales)
   library(lubridate)
-  library(rstudioapi)
+  
   
   current_path = rstudioapi::getActiveDocumentContext()$path 
   setwd(dirname(current_path ))
@@ -30,13 +30,14 @@
   ####################################################
   # Telechargement et préparation des données
   ####################################################
-  
+
   # General data from SPF
   url <- "https://www.data.gouv.fr/fr/datasets/r/f335f9ea-86e3-4ffa-9684-93c009d5e617"
   dest <- "./spf_donneesensemble.csv"
   spf<- download.file(url,dest)
   dbspf<- read_csv("spf_donneesensemble.csv")
-  LastObs<-(max(dbspf$date)-3) 
+  LastObs<-(max(dbspf$date))
+  LastObsCas<-LastObs-3
   
   # Correction jours fériés SPF
   download.file("https://www.data.gouv.fr/fr/datasets/r/6637991e-c4d8-4cd6-854e-ce33c5ab49d5",
@@ -86,7 +87,7 @@
                                         "Corrigé des jours fériés"="red")) +  
     labs(y=NULL,
          x=NULL,
-         title = "Nombre de cas positif sur 7 jours glissants",
+         title = "Nombre de cas positifs, moyenne sur 7 jours glissants",
          caption="Notes : correction des jours fériés d'après la méthode SPF. \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama") 
   print(gCorrectionJoursFeries)
   ggsave("./gCorrectionJoursFeries.png", plot = gCorrectionJoursFeries, bg = "white", width = 7, height = 4)
@@ -94,8 +95,8 @@
   
   # Prolongation du Reffectif
   dbspf <- dbspf %>%
-    mutate(ReBrut = pos_7j/lag(pos_7j,7)) %>%
-    mutate(Re = rollapply(ReBrut,3,mean,align="right",fill=NA))
+    mutate(ReBrut = posAdj/lag(posAdj,7)) %>%
+    mutate(Re = rollapply(ReBrut,14,mean,align="center",fill=NA))
   
   library(EpiEstim)
   incid<-dbspf%>%
@@ -126,9 +127,11 @@
   gRcompare<-ggplot(data=filter(dbspf,dbspf$date>"2020-07-01")) +
     geom_line(aes(x=date,y=REpiEstim,color="R: EpiEstim"),size=1) +
     geom_line(aes(x=date,y=R, color="R: SPF"),size=1) +
+    geom_line(aes(x=date,y=Re, color="R: Moy. mobile de la croissance hebdomadaire"),size=0.3) +
     geom_hline(yintercept = 1, size=0.3)+
     scale_color_manual(name="",values=c("R: EpiEstim"="blue",
-                                        "R: SPF"="black")) +
+                                        "R: SPF"="black",
+                                        "R: Moy. mobile de la croissance hebdomadaire"="red")) +
     labs(y="R",
          x=NULL,
          title="Estimation du taux de reproduction effectif et comparaison à la mesure SPF",
@@ -138,9 +141,11 @@
   ggsave("./gRcompare.png", plot = gRcompare, bg = "white", width = 7, height = 4)
     
   
+  ## Construction de la base de donnees
   
   db<-dbspf%>%
-    filter(date>="2020-07-01" & date<=LastObs)  %>%
+    subset(select = c(date,Re,R, REpiEstim,pos,posAdj,hosp,rea,incid_hosp,incid_rea,incid_dchosp)) %>%
+    filter(date>="2020-07-01" )  %>%
     na.pass()
   
   # Lissage
@@ -159,26 +164,30 @@
   db$cas_sm<-predict(cas_sm_model,newdata = db,na.action = na.exclude)
   ggplot(data=db) + 
     geom_point(aes(x=date,y=posAdj),color = "black") + 
-    geom_line(aes(x=date,y=cas_sm),color = "red") 
+    geom_line(aes(x=date,y=cas_sm), color = "red") +
+    labs(title = "Cas positifs (corrigés des jours fériés)")
   
   hosp_sm_model<-loess(hospmean ~ index,data = db ,span=0.05)
   db$hosp_sm<-predict(hosp_sm_model,newdata = db, na.action = na.exclude)
   ggplot(data=db) + 
     geom_point(aes(x=date,y=hosp),color = "black") + 
-    geom_line(aes(x=date,y=hosp_sm),color = "red")
+    geom_line(aes(x=date,y=hosp_sm),color = "red") +
+    labs(title = "Lits en hospitalisation conventionnelle")
   
   rea_sm_model<-loess(reamean ~ index,data = db ,span=0.05)
   db$rea_sm<-predict(rea_sm_model,newdata = db, na.action = na.exclude)
   ggplot(data=db) + 
     geom_point(aes(x=date,y=reamean),color = "black") + 
-    geom_line(aes(x=date,y=rea_sm),color = "red")
+    geom_line(aes(x=date,y=rea_sm),color = "red") +
+    labs(title = "Lits en soins critiques")
   
   db$dc <- db$incid_dchospmean
   dc_sm_model<-loess(dc ~ index,data = db ,span=0.05)
   db$dc_sm<-predict(dc_sm_model,newdata = db, na.action = na.exclude)
   ggplot(data=db) + 
     geom_point(aes(x=date,y=dc),color = "black") + 
-    geom_line(aes(x=date,y=dc_sm),color = "red")
+    geom_line(aes(x=date,y=dc_sm),color = "red") +
+    labs(title = "Décès hospitaliers")
   
   
   ####################################################
@@ -194,10 +203,8 @@
   HorizonForecast<-7*(2)
   LengthGraph <- 3*30 # longueur des graphiques
   
-  LastObs<-LastObs-3
-  
-  dateFcst<-seq(from = as.Date(LastObs-OutofSample+1), to = as.Date(LastObs-OutofSample+HorizonForecast), by = 'day')
-  debFcst<-LastObs-OutofSample
+  debFcst<-LastObsCas-OutofSample
+  dateFcst<-seq(from = as.Date(debFcst-OutofSample+1), to = as.Date(debFcst-OutofSample+HorizonForecast), by = 'day')
   FirstDayFcst<-debFcst+1
   
   DataEpiVAR <- db %>%
@@ -334,7 +341,7 @@
     labs(x = NULL, y = NULL, title = "Décès hospitaliers")
   
   
-  TitleGraph = paste("Projection EpiVAR à partir du ",FirstDayFcst," (Dernier point observé : ",LastObs,")\n",sep="")
+  TitleGraph = paste("Projection EpiVAR à partir du ",FirstDayFcst,sep="")
     
   gEpiVAR<-ggarrange(gR,gcas,ghosp,grea,gdc,
                      ncol=2,
@@ -366,8 +373,9 @@
   HorizonForecast<-7*k+3
   LengthGraph <- 2*30 # longueur des graphiques
   
-  dateFcst<-seq(from = as.Date(LastObs-OutofSample+1), to = as.Date(LastObs-OutofSample+HorizonForecast), by = 'day')
-  debFcst<-LastObs-OutofSample
+  debFcst<-LastObsCas-OutofSample
+  dateFcst<-seq(from = as.Date(LastObsCas-OutofSample+1), to = as.Date(LastObsCas-OutofSample+HorizonForecast), by = 'day')
+
   FirstDayFcst<-debFcst+1
   
   DataEpiVAR <- db %>%
@@ -504,7 +512,7 @@
     labs(x = NULL, y = NULL, title = "Décès hospitaliers")
   
   
-  TitleGraph = paste("Projection EpiVAR à partir du ",FirstDayFcst," (Dernier point observé : ",LastObs,")\n",sep="")
+  TitleGraph = paste("Projection EpiVAR out-of-sample à partir du ",FirstDayFcst,sep="")
   
   gEpiVARos<-ggarrange(gR,gcas,ghosp,grea,gdc,
                      ncol=2,
