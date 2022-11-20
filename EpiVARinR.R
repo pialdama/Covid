@@ -256,11 +256,11 @@
   fcstRBind<-filter(fcstRBind,fcstRBind$date>=as.Date(LastObs-LengthGraph))
   
   gR<-ggplot(data=fcstRBind) +
-    geom_line(aes(x=date, y = REpiEstim, color = "Observé")) +
+    geom_line(aes(x=date, y = REpiEstim, color = "Tendance")) +
     geom_line(aes(x=date, y = fcst, color = "Projection")) + 
     geom_ribbon(aes(x=date, ymin = low, ymax=up, fill="Intervalle de prévision"), alpha = 0.2)  +
     geom_hline(yintercept = 1, size = 0.2) +
-    scale_color_manual(name  ="", values = c("Observé" = "black", "Projection" = "blue")) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL , title = "Taux de reproduction effectif (Reff)")
@@ -275,10 +275,10 @@
   
   gcas<-ggplot(data=fcstcasBind) +
     geom_col(aes(x=date, y = cas), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = cas_sm, color = "Observé")) +
+    geom_line(aes(x=date, y = cas_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = fcst, color = "Projection")) + 
     geom_ribbon(aes(x=date, ymin = low, ymax=up, fill="Intervalle de prévision"), alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Observé" = "black", "Projection" = "blue")) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3) ) + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
@@ -294,10 +294,10 @@
   
   ghosp<-ggplot(data=fcsthospBind) +
     geom_col(aes(x=date, y = hosp), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = hosp_sm, color = "Observé")) +
+    geom_line(aes(x=date, y = hosp_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = fcst, color = "Projection")) +
     geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Observé" = "black", "Projection" = "blue")) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL,  title = "Lits en hospitalisation conventionnelle")
@@ -313,10 +313,10 @@
   
   grea<-ggplot(data=fcstreaBind) +
     geom_col(aes(x=date, y = rea), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = rea_sm, color = "Observé")) +
+    geom_line(aes(x=date, y = rea_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = fcst, color = "Projection")) +
     geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Observé" = "black", "Projection" = "blue")) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL,y = NULL , title = "Lits en soins critiques")
@@ -332,10 +332,10 @@
   
   gdc<-ggplot(data=fcstdcBind) +
     geom_col(aes(x=date, y = dc), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = dc_sm, color = "Observé")) +
+    geom_line(aes(x=date, y = dc_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = fcst, color = "Projection")) +
     geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Observé" = "black", "Projection" = "blue")) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL, title = "Décès hospitaliers")
@@ -427,11 +427,11 @@
   fcstRBind<-filter(fcstRBind,fcstRBind$date>=as.Date(LastObs-LengthGraph))
   
   gR<-ggplot(data=fcstRBind) +
-    geom_line(aes(x=date, y = REpiEstim, color = "Observé")) +
+    geom_line(aes(x=date, y = REpiEstim, color = "Tendance")) +
     geom_line(aes(x=date, y = fcst, color = "Projection")) + 
     geom_ribbon(aes(x=date, ymin = low, ymax=up, fill="Intervalle de prévision"), alpha = 0.2)  +
     geom_hline(yintercept = 1, size = 0.2) +
-    scale_color_manual(name  ="", values = c("Observé" = "black", "Projection" = "blue")) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL , title = "Taux de reproduction effectif (Reff)")
@@ -446,10 +446,10 @@
   
   gcas<-ggplot(data=fcstcasBind) +
     geom_col(aes(x=date, y = cas), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = cas_sm, color = "Observé")) +
+    geom_line(aes(x=date, y = cas_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = fcst, color = "Projection")) + 
     geom_ribbon(aes(x=date, ymin = low, ymax=up, fill="Intervalle de prévision"), alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Observé" = "black", "Projection" = "blue")) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3) ) + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
@@ -465,10 +465,10 @@
   
   ghosp<-ggplot(data=fcsthospBind) +
     geom_col(aes(x=date, y = hosp), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = hosp_sm, color = "Observé")) +
+    geom_line(aes(x=date, y = hosp_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = fcst, color = "Projection")) +
     geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Observé" = "black", "Projection" = "blue")) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL,  title = "Lits en hospitalisation conventionnelle")
@@ -484,10 +484,10 @@
   
   grea<-ggplot(data=fcstreaBind) +
     geom_col(aes(x=date, y = rea), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = rea_sm, color = "Observé")) +
+    geom_line(aes(x=date, y = rea_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = fcst, color = "Projection")) +
     geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Observé" = "black", "Projection" = "blue")) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL,y = NULL , title = "Lits en soins critiques")
@@ -503,10 +503,10 @@
   
   gdc<-ggplot(data=fcstdcBind) +
     geom_col(aes(x=date, y = dc), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = dc_sm, color = "Observé")) +
+    geom_line(aes(x=date, y = dc_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = fcst, color = "Projection")) +
     geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Observé" = "black", "Projection" = "blue")) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL, title = "Décès hospitaliers")
