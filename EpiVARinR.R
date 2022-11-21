@@ -78,11 +78,13 @@
   dbspf$posAdj<-dbspf$pos_7j/dbspf$PoidsMoyen/7
   dbspf<-filter(dbspf,dbspf$date>"2020-01-01" & dbspf$date<=LastObs )
   
-  gCorrectionJoursFeries<-ggplot(data=filter(dbspf,dbspf$date>="2022-06-01")) +
+  gCorrectionJoursFeries<-ggplot(data=dbspf) +
     geom_line(aes(x=date,y=pos_7j/7,color="Brut")) +
     geom_line(aes(x=date,y=posAdj,color="Corrigé des jours fériés")) +
     scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3) ) + 
+    scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + 
+    theme( legend.position = "top") +
     scale_color_manual(name="",values=c("Brut"="blue",
                                         "Corrigé des jours fériés"="red")) +  
     labs(y=NULL,
@@ -129,6 +131,7 @@
     geom_line(aes(x=date,y=R, color="R: SPF"),size=1) +
     geom_line(aes(x=date,y=Re, color="R: Moy. mobile de la croissance hebdomadaire"),size=0.3) +
     geom_hline(yintercept = 1, size=0.3)+
+    scale_x_date( date_label = "%Y-%m") + 
     scale_color_manual(name="",values=c("R: EpiEstim"="blue",
                                         "R: SPF"="black",
                                         "R: Moy. mobile de la croissance hebdomadaire"="red")) +
@@ -136,7 +139,7 @@
          x=NULL,
          title="Estimation du taux de reproduction effectif et comparaison à la mesure SPF",
          caption="Notes : calcul du R effectif à partir du package EpiEstim (mean_si = 5.5, std_si = 1.5). \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama") + 
-    theme_bw() + theme(legend.position = "right")
+    theme_bw() + theme(legend.position = "top")
   print(gRcompare)
   ggsave("./gRcompare.png", plot = gRcompare, bg = "white", width = 7, height = 4)
     
@@ -242,110 +245,96 @@
   
   # Forecasts
   Forecast<-predict(EpiVAR, 
-                    n.ahead = HorizonForecast, 
-                    pi = ConfidenceLevel, 
-                    dumvar = NULL)
+                               n.ahead = HorizonForecast, 
+                               pi = ConfidenceLevel, 
+                               dumvar = NULL)
+  
+  Forecast_df <- as.data.frame(lapply(Forecast$fcst,unlist)) %>%
+    subset( select = -c(R.CI,cas.CI,hosp.CI,rea.CI,dc.CI)) %>%
+    mutate_all( function(x) exp(cumsum(x))) %>%
+    mutate(date = dateFcst ) %>%
+    full_join(db,Forecast_df,by = "date") %>%
+    mutate(R.fcst = R.fcst*REpiEstim[date==debFcst]) %>%
+    mutate(R.fcstUp = R.upper*REpiEstim[date==debFcst]) %>%
+    mutate(R.fcstLow = R.lower*REpiEstim[date==debFcst]) %>%
+    mutate(cas.fcst = cas.fcst*cas_sm[date==debFcst]) %>%
+    mutate(cas.fcstUp = cas.upper*cas_sm[date==debFcst]) %>%
+    mutate(cas.fcstLow = cas.lower*cas_sm[date==debFcst]) %>%
+    mutate(hosp.fcst = hosp.fcst*hosp_sm[date==debFcst]) %>%
+    mutate(hosp.fcstUp = hosp.upper*hosp_sm[date==debFcst]) %>%
+    mutate(hosp.fcstLow = hosp.lower*hosp_sm[date==debFcst]) %>%
+    mutate(rea.fcst = rea.fcst*rea_sm[date==debFcst]) %>%
+    mutate(rea.fcstUp = rea.upper*rea_sm[date==debFcst]) %>%
+    mutate(rea.fcstLow = rea.lower*rea_sm[date==debFcst]) %>%
+    mutate(dc.fcst = dc.fcst*dc_sm[date==debFcst]) %>%
+    mutate(dc.fcstUp = dc.upper*dc_sm[date==debFcst]) %>%
+    mutate(dc.fcstLow = dc.lower*dc_sm[date==debFcst]) %>% 
+    arrange( desc(date)) %>%
+    filter(  date >= as.Date(LastObs-LengthGraph))
   
   # Plots forecasts
-  fcstR <-exp(cumsum(as.data.frame(Forecast$fcst$R)))
-  fcstR$date<- dateFcst
-  fcstRBind<-full_join(db,fcstR)
-  fcstRBind$fcst<-fcstRBind$fcst*fcstRBind$REpiEstim[fcstRBind$date==debFcst]
-  fcstRBind$low<-fcstRBind$lower*fcstRBind$REpiEstim[fcstRBind$date==debFcst]
-  fcstRBind$up<-fcstRBind$upper*fcstRBind$REpiEstim[fcstRBind$date==debFcst]
-  fcstRBind<-filter(fcstRBind,fcstRBind$date>=as.Date(LastObs-LengthGraph))
-  
-  gR<-ggplot(data=fcstRBind) +
+  gR<-ggplot(data=Forecast_df) +
     geom_line(aes(x=date, y = REpiEstim, color = "Tendance")) +
-    geom_line(aes(x=date, y = fcst, color = "Projection")) + 
-    geom_ribbon(aes(x=date, ymin = low, ymax=up, fill="Intervalle de prévision"), alpha = 0.2)  +
+    geom_line(aes(x=date, y = R.fcst, color = "Projection")) + 
+    geom_ribbon(aes(x=date, ymin = R.fcstLow, ymax=R.fcstUp, fill="Intervalle de prévision"), alpha = 0.2)  +
     geom_hline(yintercept = 1, size = 0.2) +
     scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL , title = "Taux de reproduction effectif (Reff)")
   
-  fcstcas <-exp(cumsum(as.data.frame(Forecast$fcst$cas)))
-  fcstcas$date<-dateFcst
-  fcstcasBind<-full_join(db,fcstcas)
-  fcstcasBind$fcst<-fcstcasBind$fcst*fcstcasBind$cas_sm[db$date==debFcst]
-  fcstcasBind$low<-fcstcasBind$lower*fcstcasBind$cas_sm[db$date==debFcst]
-  fcstcasBind$up<-fcstcasBind$upper*fcstcasBind$cas_sm[db$date==debFcst]
-  fcstcasBind<-filter(fcstcasBind,fcstcasBind$date>=as.Date(LastObs-LengthGraph))
-  
-  gcas<-ggplot(data=fcstcasBind) +
+  gcas<-ggplot(data=Forecast_df) +
     geom_col(aes(x=date, y = cas), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = cas_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = fcst, color = "Projection")) + 
-    geom_ribbon(aes(x=date, ymin = low, ymax=up, fill="Intervalle de prévision"), alpha = 0.2)  +
+    geom_line(aes(x=date, y = cas.fcst, color = "Projection")) + 
+    geom_ribbon(aes(x=date, ymin = cas.fcstLow, ymax=cas.fcstUp, fill="Intervalle de prévision"), alpha = 0.2)  +
     scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3) ) + 
+    scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL , title = "Cas confirmés (date de prélèvement)")
-    
-  fcsthosp <-exp(cumsum(as.data.frame(Forecast$fcst$hosp)))
-  fcsthosp$date<-dateFcst
-  fcsthospBind<-full_join(db,fcsthosp)
-  fcsthospBind$fcst<-fcsthospBind$fcst*fcsthospBind$hosp_sm[db$date==debFcst]
-  fcsthospBind$low<-fcsthospBind$lower*fcsthospBind$hosp_sm[db$date==debFcst]
-  fcsthospBind$up<-fcsthospBind$upper*fcsthospBind$hosp_sm[db$date==debFcst]
-  fcsthospBind<-filter(fcsthospBind,fcsthospBind$date>=as.Date(LastObs-LengthGraph))
   
-  ghosp<-ggplot(data=fcsthospBind) +
-    geom_col(aes(x=date, y = hosp), fill="grey",alpha = 0.4) +
+  ghosp<-ggplot(data=Forecast_df) +
+    geom_col(aes(x=date, y = hospmean), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = hosp_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = fcst, color = "Projection")) +
-    geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
+    geom_line(aes(x=date, y = hosp.fcst, color = "Projection")) +
+    geom_ribbon(aes(x=date, ymin = hosp.fcstLow, ymax=hosp.fcstUp), fill="blue", alpha = 0.2)  +
     scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL,  title = "Lits en hospitalisation conventionnelle")
   
-  
-  fcstrea <-exp(cumsum(as.data.frame(Forecast$fcst$rea)))
-  fcstrea$date<-dateFcst
-  fcstreaBind<-full_join(db,fcstrea)
-  fcstreaBind$fcst<-fcstreaBind$fcst*fcstreaBind$rea_sm[db$date==debFcst]
-  fcstreaBind$low<-fcstreaBind$lower*fcstreaBind$rea_sm[db$date==debFcst]
-  fcstreaBind$up<-fcstreaBind$upper*fcstreaBind$rea_sm[db$date==debFcst]
-  fcstreaBind<-filter(fcstreaBind,fcstreaBind$date>=as.Date(LastObs-LengthGraph))
-  
-  grea<-ggplot(data=fcstreaBind) +
-    geom_col(aes(x=date, y = rea), fill="grey",alpha = 0.4) +
+  grea<-ggplot(data=Forecast_df) +
+    geom_col(aes(x=date, y = reamean), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = rea_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = fcst, color = "Projection")) +
-    geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
+    geom_line(aes(x=date, y = rea.fcst, color = "Projection")) +
+    geom_ribbon(aes(x=date, ymin = rea.fcstLow, ymax=rea.fcstUp), fill="blue", alpha = 0.2)  +
     scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL,y = NULL , title = "Lits en soins critiques")
-    
   
-  fcstdc <-exp(cumsum(as.data.frame(Forecast$fcst$dc)))
-  fcstdc$date<-dateFcst
-  fcstdcBind<-full_join(db,fcstdc)
-  fcstdcBind$fcst<-fcstdcBind$fcst*fcstdcBind$dc_sm[db$date==debFcst]
-  fcstdcBind$low<-fcstdcBind$lower*fcstdcBind$dc_sm[db$date==debFcst]
-  fcstdcBind$up<-fcstdcBind$upper*fcstdcBind$dc_sm[db$date==debFcst]
-  fcstdcBind<-filter(fcstdcBind,fcstdcBind$date>=as.Date(LastObs-LengthGraph))
-  
-  gdc<-ggplot(data=fcstdcBind) +
+  gdc<-ggplot(data=Forecast_df) +
     geom_col(aes(x=date, y = dc), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = dc_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = fcst, color = "Projection")) +
-    geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
+    geom_line(aes(x=date, y = dc.fcst, color = "Projection")) +
+    geom_ribbon(aes(x=date, ymin = dc.fcstLow, ymax=dc.fcstUp), fill="blue", alpha = 0.2)  +
     scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     theme_bw() + theme(plot.title = element_text(size = 11)) +
+    scale_x_date( date_label = "%Y-%m") + 
     labs(x = NULL, y = NULL, title = "Décès hospitaliers")
   
   
   TitleGraph = paste("Projection EpiVAR à partir du ",FirstDayFcst,sep="")
     
   gEpiVAR<-ggarrange(gR,gcas,ghosp,grea,gdc,
-                     ncol=2,
-                     nrow=3,
+                     ncol=1,
+                     nrow=5,
                      legend = "bottom",
                      common.legend = TRUE,
                      labels = "auto",
@@ -412,102 +401,88 @@
   # checkresiduals(EpiVAR$varresult$dc)
   
   # Forecasts
-  Forecast<-predict(EpiVAR, 
+  ForecastOutOFSample<-predict(EpiVAR, 
                     n.ahead = HorizonForecast, 
                     pi = ConfidenceLevel, 
                     dumvar = NULL)
   
-  # Plots forecasts
-  fcstR <-exp(cumsum(as.data.frame(Forecast$fcst$R)))
-  fcstR$date<- dateFcst
-  fcstRBind<-full_join(db,fcstR)
-  fcstRBind$fcst<-fcstRBind$fcst*fcstRBind$REpiEstim[fcstRBind$date==debFcst]
-  fcstRBind$low<-fcstRBind$lower*fcstRBind$REpiEstim[fcstRBind$date==debFcst]
-  fcstRBind$up<-fcstRBind$upper*fcstRBind$REpiEstim[fcstRBind$date==debFcst]
-  fcstRBind<-filter(fcstRBind,fcstRBind$date>=as.Date(LastObs-LengthGraph))
+  ForecastOutOFSample_df <- as.data.frame(lapply(ForecastOutOFSample$fcst,unlist)) %>%
+    subset( select = -c(R.CI,cas.CI,hosp.CI,rea.CI,dc.CI)) %>%
+    mutate_all( function(x) exp(cumsum(x))) %>%
+    mutate(date = dateFcst ) %>%
+    full_join(db,ForecastOutOFSample_df,by = "date") %>%
+    mutate(R.fcst = R.fcst*REpiEstim[date==debFcst]) %>%
+    mutate(R.fcstUp = R.upper*REpiEstim[date==debFcst]) %>%
+    mutate(R.fcstLow = R.lower*REpiEstim[date==debFcst]) %>%
+    mutate(cas.fcst = cas.fcst*cas_sm[date==debFcst]) %>%
+    mutate(cas.fcstUp = cas.upper*cas_sm[date==debFcst]) %>%
+    mutate(cas.fcstLow = cas.lower*cas_sm[date==debFcst]) %>%
+    mutate(hosp.fcst = hosp.fcst*hosp_sm[date==debFcst]) %>%
+    mutate(hosp.fcstUp = hosp.upper*hosp_sm[date==debFcst]) %>%
+    mutate(hosp.fcstLow = hosp.lower*hosp_sm[date==debFcst]) %>%
+    mutate(rea.fcst = rea.fcst*rea_sm[date==debFcst]) %>%
+    mutate(rea.fcstUp = rea.upper*rea_sm[date==debFcst]) %>%
+    mutate(rea.fcstLow = rea.lower*rea_sm[date==debFcst]) %>%
+    mutate(dc.fcst = dc.fcst*dc_sm[date==debFcst]) %>%
+    mutate(dc.fcstUp = dc.upper*dc_sm[date==debFcst]) %>%
+    mutate(dc.fcstLow = dc.lower*dc_sm[date==debFcst]) %>% 
+    arrange( desc(date)) %>%
+    filter(  date >= as.Date(LastObs-LengthGraph))
   
-  gR<-ggplot(data=fcstRBind) +
+  # Plots forecasts
+  gR<-ggplot(data=ForecastOutOFSample_df) +
     geom_line(aes(x=date, y = REpiEstim, color = "Tendance")) +
-    geom_line(aes(x=date, y = fcst, color = "Projection")) + 
-    geom_ribbon(aes(x=date, ymin = low, ymax=up, fill="Intervalle de prévision"), alpha = 0.2)  +
+    geom_line(aes(x=date, y = R.fcst, color = "Projection")) + 
+    geom_ribbon(aes(x=date, ymin = R.fcstLow, ymax=R.fcstUp, fill="Intervalle de prévision"), alpha = 0.2)  +
     geom_hline(yintercept = 1, size = 0.2) +
     scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL , title = "Taux de reproduction effectif (Reff)")
   
-  fcstcas <-exp(cumsum(as.data.frame(Forecast$fcst$cas)))
-  fcstcas$date<-dateFcst
-  fcstcasBind<-full_join(db,fcstcas)
-  fcstcasBind$fcst<-fcstcasBind$fcst*fcstcasBind$cas_sm[db$date==debFcst]
-  fcstcasBind$low<-fcstcasBind$lower*fcstcasBind$cas_sm[db$date==debFcst]
-  fcstcasBind$up<-fcstcasBind$upper*fcstcasBind$cas_sm[db$date==debFcst]
-  fcstcasBind<-filter(fcstcasBind,fcstcasBind$date>=as.Date(LastObs-LengthGraph))
-  
-  gcas<-ggplot(data=fcstcasBind) +
+  gcas<-ggplot(data=ForecastOutOFSample_df) +
     geom_col(aes(x=date, y = cas), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = cas_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = fcst, color = "Projection")) + 
-    geom_ribbon(aes(x=date, ymin = low, ymax=up, fill="Intervalle de prévision"), alpha = 0.2)  +
+    geom_line(aes(x=date, y = cas.fcst, color = "Projection")) + 
+    geom_ribbon(aes(x=date, ymin = cas.fcstLow, ymax=cas.fcstUp, fill="Intervalle de prévision"), alpha = 0.2)  +
     scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
     scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3) ) + 
+    scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL , title = "Cas confirmés (date de prélèvement)")
   
-  fcsthosp <-exp(cumsum(as.data.frame(Forecast$fcst$hosp)))
-  fcsthosp$date<-dateFcst
-  fcsthospBind<-full_join(db,fcsthosp)
-  fcsthospBind$fcst<-fcsthospBind$fcst*fcsthospBind$hosp_sm[db$date==debFcst]
-  fcsthospBind$low<-fcsthospBind$lower*fcsthospBind$hosp_sm[db$date==debFcst]
-  fcsthospBind$up<-fcsthospBind$upper*fcsthospBind$hosp_sm[db$date==debFcst]
-  fcsthospBind<-filter(fcsthospBind,fcsthospBind$date>=as.Date(LastObs-LengthGraph))
-  
-  ghosp<-ggplot(data=fcsthospBind) +
-    geom_col(aes(x=date, y = hosp), fill="grey",alpha = 0.4) +
+  ghosp<-ggplot(data=ForecastOutOFSample_df) +
+    geom_col(aes(x=date, y = hospmean), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = hosp_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = fcst, color = "Projection")) +
-    geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
+    geom_line(aes(x=date, y = hosp.fcst, color = "Projection")) +
+    geom_ribbon(aes(x=date, ymin = hosp.fcstLow, ymax=hosp.fcstUp), fill="blue", alpha = 0.2)  +
     scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL,  title = "Lits en hospitalisation conventionnelle")
   
-  
-  fcstrea <-exp(cumsum(as.data.frame(Forecast$fcst$rea)))
-  fcstrea$date<-dateFcst
-  fcstreaBind<-full_join(db,fcstrea)
-  fcstreaBind$fcst<-fcstreaBind$fcst*fcstreaBind$rea_sm[db$date==debFcst]
-  fcstreaBind$low<-fcstreaBind$lower*fcstreaBind$rea_sm[db$date==debFcst]
-  fcstreaBind$up<-fcstreaBind$upper*fcstreaBind$rea_sm[db$date==debFcst]
-  fcstreaBind<-filter(fcstreaBind,fcstreaBind$date>=as.Date(LastObs-LengthGraph))
-  
-  grea<-ggplot(data=fcstreaBind) +
-    geom_col(aes(x=date, y = rea), fill="grey",alpha = 0.4) +
+  grea<-ggplot(data=ForecastOutOFSample_df) +
+    geom_col(aes(x=date, y = reamean), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = rea_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = fcst, color = "Projection")) +
-    geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
+    geom_line(aes(x=date, y = rea.fcst, color = "Projection")) +
+    geom_ribbon(aes(x=date, ymin = rea.fcstLow, ymax=rea.fcstUp), fill="blue", alpha = 0.2)  +
     scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL,y = NULL , title = "Lits en soins critiques")
-  
-  
-  fcstdc <-exp(cumsum(as.data.frame(Forecast$fcst$dc)))
-  fcstdc$date<-dateFcst
-  fcstdcBind<-full_join(db,fcstdc)
-  fcstdcBind$fcst<-fcstdcBind$fcst*fcstdcBind$dc_sm[db$date==debFcst]
-  fcstdcBind$low<-fcstdcBind$lower*fcstdcBind$dc_sm[db$date==debFcst]
-  fcstdcBind$up<-fcstdcBind$upper*fcstdcBind$dc_sm[db$date==debFcst]
-  fcstdcBind<-filter(fcstdcBind,fcstdcBind$date>=as.Date(LastObs-LengthGraph))
-  
-  gdc<-ggplot(data=fcstdcBind) +
+
+  gdc<-ggplot(data=ForecastOutOFSample_df) +
     geom_col(aes(x=date, y = dc), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = dc_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = fcst, color = "Projection")) +
-    geom_ribbon(aes(x=date, ymin = low, ymax=up), fill="blue", alpha = 0.2)  +
+    geom_line(aes(x=date, y = dc.fcst, color = "Projection")) +
+    geom_ribbon(aes(x=date, ymin = dc.fcstLow, ymax=dc.fcstUp), fill="blue", alpha = 0.2)  +
     scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
     scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL, title = "Décès hospitaliers")
   
@@ -515,8 +490,8 @@
   TitleGraph = paste("Projection EpiVAR out-of-sample à partir du ",FirstDayFcst,sep="")
   
   gEpiVARos<-ggarrange(gR,gcas,ghosp,grea,gdc,
-                     ncol=2,
-                     nrow=3,
+                     ncol=1,
+                     nrow=5,
                      legend = "bottom",
                      common.legend = TRUE,
                      labels = "auto",
@@ -542,7 +517,6 @@
            "./extract_varirf.R")
   source("./extract_varirf.R")
   
-  
   irf<-irf(EpiVAR,
              impulse = c("R","cas","hosp","rea","dc"),
              response = NULL,
@@ -550,9 +524,8 @@
              ortho = TRUE,
              cumulative = TRUE,
              boot = TRUE,
-             ci = 0.90,
-             runs = 1000 )
-  
+             ci = 0.95,
+             runs = 100 )
   
   multiple_varirf <- extract_varirf(irf) %>%
     pivot_longer(
