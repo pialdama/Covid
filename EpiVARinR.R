@@ -199,12 +199,12 @@
   
   # Parametres: NB de lags du VAR et niveau de l'intervalle de confiance pour la prevision
   nlags<-14
-  ConfidenceLevel <- 0.9
+  ConfidenceLevel <- 0.8
   
   # Preparation du dataset
   OutofSample<-0
   HorizonForecast<-7*(2)
-  LengthGraph <- 3*30 # longueur des graphiques
+  LengthGraph <- 5*30 # longueur des graphiques
   
   debFcst<-LastObsCas-OutofSample
   dateFcst<-seq(from = as.Date(debFcst-OutofSample+1), to = as.Date(debFcst-OutofSample+HorizonForecast), by = 'day')
@@ -272,86 +272,6 @@
     arrange( desc(date)) %>%
     filter(  date >= as.Date(LastObs-LengthGraph))
   
-  # Plots forecasts
-  gR<-ggplot(data=Forecast_df) +
-    geom_line(aes(x=date, y = REpiEstim, color = "Tendance")) +
-    geom_line(aes(x=date, y = R.fcst, color = "Projection")) + 
-    geom_ribbon(aes(x=date, ymin = R.fcstLow, ymax=R.fcstUp, fill="Intervalle de prévision"), alpha = 0.2)  +
-    geom_hline(yintercept = 1, size = 0.2) +
-    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
-    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
-    scale_x_date( date_label = "%Y-%m") + 
-    theme_bw() + theme(plot.title = element_text(size = 11)) +
-    labs(x = NULL, y = NULL , title = "Taux de reproduction effectif (Reff)")
-  
-  gcas<-ggplot(data=Forecast_df) +
-    geom_col(aes(x=date, y = cas), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = cas_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = cas.fcst, color = "Projection")) + 
-    geom_ribbon(aes(x=date, ymin = cas.fcstLow, ymax=cas.fcstUp, fill="Intervalle de prévision"), alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
-    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
-    scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3) ) + 
-    scale_x_date( date_label = "%Y-%m") + 
-    theme_bw() + theme(plot.title = element_text(size = 11)) +
-    labs(x = NULL, y = NULL , title = "Cas confirmés (date de prélèvement)")
-  
-  ghosp<-ggplot(data=Forecast_df) +
-    geom_col(aes(x=date, y = hospmean), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = hosp_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = hosp.fcst, color = "Projection")) +
-    geom_ribbon(aes(x=date, ymin = hosp.fcstLow, ymax=hosp.fcstUp), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
-    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
-    scale_x_date( date_label = "%Y-%m") + 
-    theme_bw() + theme(plot.title = element_text(size = 11)) +
-    labs(x = NULL, y = NULL,  title = "Lits en hospitalisation conventionnelle")
-  
-  grea<-ggplot(data=Forecast_df) +
-    geom_col(aes(x=date, y = reamean), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = rea_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = rea.fcst, color = "Projection")) +
-    geom_ribbon(aes(x=date, ymin = rea.fcstLow, ymax=rea.fcstUp), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
-    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
-    scale_x_date( date_label = "%Y-%m") + 
-    theme_bw() + theme(plot.title = element_text(size = 11)) +
-    labs(x = NULL,y = NULL , title = "Lits en soins critiques")
-  
-  gdc<-ggplot(data=Forecast_df) +
-    geom_col(aes(x=date, y = dc), fill="grey",alpha = 0.4) +
-    geom_line(aes(x=date, y = dc_sm, color = "Tendance")) +
-    geom_line(aes(x=date, y = dc.fcst, color = "Projection")) +
-    geom_ribbon(aes(x=date, ymin = dc.fcstLow, ymax=dc.fcstUp), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
-    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
-    theme_bw() + theme(plot.title = element_text(size = 11)) +
-    scale_x_date( date_label = "%Y-%m") + 
-    labs(x = NULL, y = NULL, title = "Décès hospitaliers")
-  
-  
-  TitleGraph = paste("Projection EpiVAR à partir du ",FirstDayFcst,sep="")
-    
-  gEpiVAR<-ggarrange(gR,gcas,ghosp,grea,gdc,
-                     ncol=1,
-                     nrow=5,
-                     legend = "bottom",
-                     common.legend = TRUE,
-                     labels = "auto",
-                     align="hv") %>%
-    annotate_figure( top = text_grob(TitleGraph,
-                                              just = "top",
-                                              face = "bold", 
-                                              size = 12),
-                              bottom = text_grob("Source: Santé Publique France. \nModèle et calculs : P. Aldama @paldama.",
-                                                 hjust = 1, 
-                                                 x = 1, 
-                                                 face = "italic", 
-                                                 size = 10))
-  ggsave("./gEpiVAR.png", plot=gEpiVAR, bg="white", width = 7, height = 10)
-  
-  print(gEpiVAR)
-  
   ####################################################
   # Estimation et forecast out-of-sample
   ####################################################
@@ -360,7 +280,6 @@
   k<-2
   OutofSample<-7*k
   HorizonForecast<-7*k+3
-  LengthGraph <- 2*30 # longueur des graphiques
   
   debFcst<-LastObsCas-OutofSample
   dateFcst<-seq(from = as.Date(LastObsCas-OutofSample+1), to = as.Date(LastObsCas-OutofSample+HorizonForecast), by = 'day')
@@ -429,67 +348,80 @@
     arrange( desc(date)) %>%
     filter(  date >= as.Date(LastObs-LengthGraph))
   
-  # Plots forecasts
-  gR<-ggplot(data=ForecastOutOFSample_df) +
+  ######################################
+  # Plots
+  ######################################
+  
+  gR<-ggplot(data=Forecast_df) +
     geom_line(aes(x=date, y = REpiEstim, color = "Tendance")) +
     geom_line(aes(x=date, y = R.fcst, color = "Projection")) + 
     geom_ribbon(aes(x=date, ymin = R.fcstLow, ymax=R.fcstUp, fill="Intervalle de prévision"), alpha = 0.2)  +
+    geom_line(data = ForecastOutOFSample_df, aes(x=date, y = R.fcst, color = "Projection out-of-sample")) + 
+    geom_ribbon(data = ForecastOutOFSample_df, aes(x=date, ymin = R.fcstLow, ymax=R.fcstUp, fill="Intervalle de prévision out-of-sample"), alpha = 0.2)  +
     geom_hline(yintercept = 1, size = 0.2) +
-    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
-    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue", "Projection out-of-sample"="red")) +
+    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" , "Intervalle de prévision out-of-sample" = "red" )) +
     scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL , title = "Taux de reproduction effectif (Reff)")
   
-  gcas<-ggplot(data=ForecastOutOFSample_df) +
+  gcas<-ggplot(data=Forecast_df) +
     geom_col(aes(x=date, y = cas), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = cas_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = cas.fcst, color = "Projection")) + 
     geom_ribbon(aes(x=date, ymin = cas.fcstLow, ymax=cas.fcstUp, fill="Intervalle de prévision"), alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
-    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    geom_line(data = ForecastOutOFSample_df, aes(x=date, y = cas.fcst, color = "Projection out-of-sample")) + 
+    geom_ribbon(data = ForecastOutOFSample_df, aes(x=date, ymin = cas.fcstLow, ymax=cas.fcstUp, fill="Intervalle de prévision out-of-sample"), alpha = 0.2)  +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue", "Projection out-of-sample"="red")) +
+    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" , "Intervalle de prévision out-of-sample" = "red" )) +
     scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3) ) + 
     scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL , title = "Cas confirmés (date de prélèvement)")
   
-  ghosp<-ggplot(data=ForecastOutOFSample_df) +
+  ghosp<-ggplot(data=Forecast_df) +
     geom_col(aes(x=date, y = hospmean), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = hosp_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = hosp.fcst, color = "Projection")) +
     geom_ribbon(aes(x=date, ymin = hosp.fcstLow, ymax=hosp.fcstUp), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
-    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    geom_line(data = ForecastOutOFSample_df, aes(x=date, y = hosp.fcst, color = "Projection out-of-sample")) + 
+    geom_ribbon(data = ForecastOutOFSample_df, aes(x=date, ymin = hosp.fcstLow, ymax=hosp.fcstUp, fill="Intervalle de prévision out-of-sample"), alpha = 0.2)  +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue", "Projection out-of-sample"="red")) +
+    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" , "Intervalle de prévision out-of-sample" = "red" )) +
     scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL,  title = "Lits en hospitalisation conventionnelle")
   
-  grea<-ggplot(data=ForecastOutOFSample_df) +
+  grea<-ggplot(data=Forecast_df) +
     geom_col(aes(x=date, y = reamean), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = rea_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = rea.fcst, color = "Projection")) +
     geom_ribbon(aes(x=date, ymin = rea.fcstLow, ymax=rea.fcstUp), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
-    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    geom_line(data = ForecastOutOFSample_df, aes(x=date, y = rea.fcst, color = "Projection out-of-sample")) + 
+    geom_ribbon(data = ForecastOutOFSample_df, aes(x=date, ymin = rea.fcstLow, ymax=rea.fcstUp, fill="Intervalle de prévision out-of-sample"), alpha = 0.2)  +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue", "Projection out-of-sample"="red")) +
+    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" , "Intervalle de prévision out-of-sample" = "red" )) +
     scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL,y = NULL , title = "Lits en soins critiques")
 
-  gdc<-ggplot(data=ForecastOutOFSample_df) +
+  gdc<-ggplot(data=Forecast_df) +
     geom_col(aes(x=date, y = dc), fill="grey",alpha = 0.4) +
     geom_line(aes(x=date, y = dc_sm, color = "Tendance")) +
     geom_line(aes(x=date, y = dc.fcst, color = "Projection")) +
     geom_ribbon(aes(x=date, ymin = dc.fcstLow, ymax=dc.fcstUp), fill="blue", alpha = 0.2)  +
-    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue")) +
-    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" )) +
+    geom_line(data = ForecastOutOFSample_df, aes(x=date, y = dc.fcst, color = "Projection out-of-sample")) + 
+    geom_ribbon(data = ForecastOutOFSample_df, aes(x=date, ymin = dc.fcstLow, ymax=dc.fcstUp, fill="Intervalle de prévision out-of-sample"), alpha = 0.2)  +
+    scale_color_manual(name  ="", values = c("Tendance" = "black", "Projection" = "blue", "Projection out-of-sample"="red")) +
+    scale_fill_manual(name = "", values = c("Intervalle de prévision" = "blue" , "Intervalle de prévision out-of-sample" = "red" )) +
     scale_x_date( date_label = "%Y-%m") + 
     theme_bw() + theme(plot.title = element_text(size = 11)) +
     labs(x = NULL, y = NULL, title = "Décès hospitaliers")
   
   
-  TitleGraph = paste("Projection EpiVAR out-of-sample à partir du ",FirstDayFcst,sep="")
+  TitleGraph = paste("Projection EpiVAR ")
   
-  gEpiVARos<-ggarrange(gR,gcas,ghosp,grea,gdc,
+  gEpiVAR<-ggarrange(gR,gcas,ghosp,grea,gdc,
                      ncol=1,
                      nrow=5,
                      legend = "bottom",
@@ -505,9 +437,9 @@
                                         x = 1, 
                                         face = "italic", 
                                         size = 10))
-  ggsave("./gEpiVAROutOfSample.png", plot=gEpiVARos, bg="white", width = 7, height = 10)
+  ggsave("./gEpiVAR.png", plot=gEpiVAR, bg="white", width = 8, height = 10)
   
-  print(gEpiVARos)
+  print(gEpiVAR)
   
   ######################################
   # IRF
