@@ -16,17 +16,25 @@ knitr::opts_chunk$set(
 )
 ```
 
-## Description du modèle
+### Description du modèle
 
 EpiVAR est un modèle économétrique de type Vecteur Auto-Regressif (VAR) pour la prévision à court-terme de la dynamique de l'épidémie de Covid en France, à l'échelle nationale. Il est estimé par MCO sur données journalières pour le taux de reproduction effectif, le nombre de cas confirmés, d'hospitalisation, de lits occupés en soins critiques et de décès hospitaliers.
 
 $$ 
 Y_t = A_0 + A_1 Y_{t-1} + ... + A_p Y_{t-p} + u_t 
 $$
-avec le vecteur des variables endogènes tel que : $$Y_t = \begin{pmatrix}  \Delta \log R_t \\ \Delta \log  Cas_t\\ \Delta \log Hosp_t \\ \Delta \log Rea_t \\ \Delta \log Décés  \end{pmatrix} $$ Le vecteur des résidus $u_t$ est supposé être i.i.d. tel que $\mathbb{E}[u_t] = 0$, $\mathbb{E}[u_tu_t']=\Sigma$ et $\mathbb{E}[u_tu_{t-1}']=0$. Très utilisé en économie, cette classe de modèle *statistique* est utilisée pour modéliser plusieurs séries temporelles qui sont reliées entre elles par des relations de causalité, ce qui est le cas en particulier des variables épidémiques.
+avec le vecteur des variables endogènes tel que : $$Y_t = \begin{pmatrix}  \Delta \log R_t \\ \Delta \log  Cas_t\\ \Delta \log Hosp_t \\ \Delta \log Rea_t \\ \Delta \log Décés  \end{pmatrix} $$ Le vecteur des résidus $u_t$ est supposé être i.i.d. tel que $\mathbb{E}[u_t] = 0$, $\mathbb{E}[u_tu_t']=\Sigma$ et $\mathbb{E}[u_tu_{t-1}']=0$.
 
+#### Fonctions impulsions-réponses et décomposition de la variance de l'erreur de prévision
 
-## Préparation des données
+Les deux figures suivantes donnent un aperçu des propriétés du modèles EpiVAR en réponse à des chocs orthogonalisés (par décomposition de Cholesky de la matrice de variance-covariance $\Sigma$). Les fonctions d'impulsions-réponses montrent la réponse cumulée de chacune des variables (en colonnes) à des chocs sur chacune de ces variables (en lignes).
+
+![](gIrf.png){width=100%}
+Une autre façon de considérer ces propriétés est de calculer la décomposition de la variance de l'erreur de prévision à partir de ces fonctions impulsions-réponses, pour chacun de ces chocs.
+
+![](gfevd.png){width=100%}
+
+### Préparation des données
 
 On commence tout d'abord par appliquer [la correction des jours fériés proposées par Santé Publique France](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&ved=2ahUKEwj9qp2S9c77AhX-YqQEHTuxBXMQFnoECBMQAQ&url=https%3A%2F%2Fwww.santepubliquefrance.fr%2Fcontent%2Fdownload%2F335872%2Ffile%2Fnote_methodo_jours_feries_15042021.pdf&usg=AOvVaw3ECFJ89paSOP0w638FRzvD).
 ![](gCorrectionJoursFeries.png){width=100%}
@@ -36,7 +44,7 @@ On calcule ensuite le taux de reproduction effectif à partir du package EpiEsti
 Enfin, on opère un double lissage de l'ensemble des séries restantes, d'abord en calculant la moyenne mobile sur les 7 derniers jours, puis par des regressions LOESS des moyennes mobiles elle-mêmes.^[Le fait de calculer une moyenne mobile *backward* sur 7 jours avant l'utilisation du lissage LOESS permet de réduire le biais de fin d'échantillon quand on calcule la tendance à partir du modèle LOESS. Le lisseur LOESS est calculé pour un paramètre de *span = 0.05*.]
 ![](gDonnees.png){width=100%}
 
-## Projections 
+### Projections 
 
 On estime ensuite le modèle sur échantillon complet (*full sample*) et sur un échantillon réduit de 2 semaines (*out-of-sample*) pour produire deux projections. La première utilise toute l'information disponible à la dernière date pour laquelle on dispose d'observation pour chacune des variables tandis que la seconde n'utilise pas les deux dernières semaines d'observations pour évaluer ce qu'aurait donné une projection passée.^[Il y a cependant un caveat à cet exercice : pour se placer dans une véritable situation de projection *out-of-sample*, il faudrait réplique le travail de préparation des données décrit plus haut en tronquant la base de données. On parlerait plutôt de *pseudo out-of-sample*.]
 

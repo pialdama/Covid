@@ -16,7 +16,7 @@ exit <- function() {
   invokeRestart("abort")
 }
 
-ComputeIRFandFEVD<-0 # produire les graphiques d'IRF et de FEVD
+ComputeIRFandFEVD<-1 # produire les graphiques d'IRF et de FEVD
 
 ####################################################
 # Telechargement et préparation des données
@@ -74,8 +74,8 @@ gCorrectionJoursFeries <- ggplot(data = dbspf) +
   geom_line(aes(x = date, y = posAdj, color = "Corrigé des jours fériés")) +
   scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
   scale_x_date(date_label = "%Y-%m") +
-  theme_bw() +
-  theme(legend.position = "top") +
+  theme_pubr(base_size = 8) +
+  theme(legend.position = "bottom") +
   scale_color_manual(name = "",
                      values = c("Brut" = "blue",
                                 "Corrigé des jours fériés" = "red")) +
@@ -143,7 +143,7 @@ gRcompare <- ggplot(data = filter(dbspf, dbspf$date > "2020-07-01")) +
     title = "Estimation du taux de reproduction effectif et comparaison à la mesure SPF",
     caption = "Notes : calcul du R effectif à partir du package EpiEstim (mean_si = 5.5, std_si = 1.5). \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama"
   ) +
-  theme_bw() + theme(legend.position = "top")
+  theme_pubr(base_size = 8) + theme(legend.position = "down")
 print(gRcompare)
 ggsave(
   "./gRcompare.png",
@@ -202,7 +202,7 @@ gCas<-ggplot(data = db) +
       "Moy. glissante 7 jours" = "black",
       "Lissage LOESS" = "red")
   ) + 
-  theme_bw() +
+  theme_pubr(base_size = 8) +
   labs(title = "Cas positifs (corrigés des jours fériés)",y=NULL,x=NULL)
 
 hosp_sm_model <- loess(hospmean ~ index, data = db , span = 0.05)
@@ -217,7 +217,7 @@ gHosp<-ggplot(data = db) +
       "Moy. glissante 7 jours" = "black",
       "Lissage LOESS" = "red")
   ) + 
-  theme_bw() +
+  theme_pubr(base_size = 8) +
   labs(title = "Lits en hospitalisation conventionnelle",y=NULL,x=NULL)
 
 rea_sm_model <- loess(reamean ~ index, data = db , span = 0.05)
@@ -232,7 +232,7 @@ gRea<-ggplot(data = db) +
       "Moy. glissante 7 jours" = "black",
       "Lissage LOESS" = "red")
   ) + 
-  theme_bw() +
+  theme_pubr(base_size = 8) +
   labs(title = "Lits en soins critiques",y=NULL,x=NULL)
 
 db$dc <- db$incid_dchospmean
@@ -248,7 +248,7 @@ gDeces<-ggplot(data = db) +
       "Moy. glissante 7 jours" = "black",
       "Lissage LOESS" = "red")
   ) + 
-  theme_bw() +
+  theme_pubr(base_size = 8) +
   labs(title = "Décès hospitaliers",y=NULL,x=NULL)
 
 gDonnees<-ggarrange(gCas, gHosp, gRea, gDeces, 
@@ -270,13 +270,13 @@ ggsave(
 ####################################################
 
 # Parametres: NB de lags du VAR et niveau de l'intervalle de confiance pour la prevision
-nlags <- 40
-ConfidenceLevel <- 0.8
+nlags <- 21
+ConfidenceLevel <- 0.9
 
 # Preparation du dataset
 OutofSample <- 0
 HorizonForecast <- 7 * (2)
-LengthGraph <- 5 * 30 # longueur des graphiques
+LengthGraph <- 4 * 30 # longueur des graphiques
 
 debFcst <- LastObsCas - OutofSample
 dateFcst <-
@@ -288,7 +288,7 @@ dateFcst <-
 FirstDayFcst <- debFcst + 1
 
 DataEpiVAR <- db %>%
-  mutate(R = log(REpiEstim / lag(REpiEstim, 1))) %>%
+  mutate(R =  log(REpiEstim/lag(REpiEstim, 1)))  %>%
   mutate(cas = log(cas_sm / lag(cas_sm, 1))) %>%
   mutate(hosp = log(hosp_sm / lag(hosp_sm, 1))) %>%
   mutate(rea = log(rea_sm / lag(rea_sm, 1))) %>%
@@ -301,7 +301,7 @@ DataEpiVAR <- db %>%
 # Estimation VAR
 EpiVAR <- VAR(DataEpiVAR,
               p = nlags,
-              type = "trend")
+              type = "none")
 
 
 # Test de stabilité du VAR
@@ -318,7 +318,7 @@ if (max(roots(EpiVAR)) < 1) {
   exit()
 }
 
-# checkresiduals(EpiVAR$varresult$R,lag=nlags)
+#checkresiduals(EpiVAR$varresult$R,lag=nlags)
 # checkresiduals(EpiVAR$varresult$cas,lag=nlags)
 # checkresiduals(EpiVAR$varresult$hosp,lag=nlags)
 # checkresiduals(EpiVAR$varresult$rea,lag=nlags)
@@ -374,7 +374,7 @@ dateFcst <-
 FirstDayFcst <- debFcst + 1
 
 DataEpiVAR <- db %>%
-  mutate(R = log(REpiEstim / lag(REpiEstim, 1))) %>%
+  mutate(R =  log(REpiEstim/lag(REpiEstim, 1)))  %>%
   mutate(cas = log(cas_sm / lag(cas_sm, 1))) %>%
   mutate(hosp = log(hosp_sm / lag(hosp_sm, 1))) %>%
   mutate(rea = log(rea_sm / lag(rea_sm, 1))) %>%
@@ -387,7 +387,7 @@ DataEpiVAR <- db %>%
 # Estimation VAR
 EpiVAR <- VAR(DataEpiVAR,
               p = nlags,
-              type = "trend")
+              type = "none")
 summary(EpiVAR)
 
 # Test de stabilité du VAR
@@ -477,7 +477,7 @@ gR <- ggplot(data = Forecast_df) +
     )
   ) +
   scale_x_date(date_label = "%Y-%m") +
-  theme_bw() + theme(plot.title = element_text(size = 11)) +
+  theme_pubr(base_size = 8) + theme(plot.title = element_text(size = 11)) +
   labs(x = NULL, y = NULL , title = "Taux de reproduction effectif (Reff)")
 
 gcas <- ggplot(data = Forecast_df) +
@@ -522,7 +522,7 @@ gcas <- ggplot(data = Forecast_df) +
   ) +
   scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
   scale_x_date(date_label = "%Y-%m") +
-  theme_bw() + theme(plot.title = element_text(size = 11)) +
+  theme_pubr(base_size = 8) + theme(plot.title = element_text(size = 11)) +
   labs(x = NULL, y = NULL , title = "Cas confirmés (date de prélèvement)")
 
 ghosp <- ggplot(data = Forecast_df) +
@@ -562,7 +562,7 @@ ghosp <- ggplot(data = Forecast_df) +
     )
   ) +
   scale_x_date(date_label = "%Y-%m") +
-  theme_bw() + theme(plot.title = element_text(size = 11)) +
+  theme_pubr(base_size = 8) + theme(plot.title = element_text(size = 11)) +
   labs(x = NULL, y = NULL,  title = "Lits en hospitalisation conventionnelle")
 
 grea <- ggplot(data = Forecast_df) +
@@ -600,7 +600,7 @@ grea <- ggplot(data = Forecast_df) +
     )
   ) +
   scale_x_date(date_label = "%Y-%m") +
-  theme_bw() + theme(plot.title = element_text(size = 11)) +
+  theme_pubr(base_size = 8) + theme(plot.title = element_text(size = 11)) +
   labs(x = NULL, y = NULL , title = "Lits en soins critiques")
 
 gdc <- ggplot(data = Forecast_df) +
@@ -638,7 +638,7 @@ gdc <- ggplot(data = Forecast_df) +
     )
   ) +
   scale_x_date(date_label = "%Y-%m") +
-  theme_bw() + theme(plot.title = element_text(size = 11)) +
+  theme_pubr(base_size = 8) + theme(plot.title = element_text(size = 11)) +
   labs(x = NULL, y = NULL, title = "Décès hospitaliers")
 
 
@@ -688,6 +688,8 @@ if (ComputeIRFandFEVD==1) {
 # IRF
 ######################################
 
+horizonIRFFEVD<-60  
+  
 download.file(
   "https://raw.githubusercontent.com/anguyen1210/var-tools/master/R/extract_varirf.R",
   "./extract_varirf.R"
@@ -698,7 +700,7 @@ irf <- irf(
   EpiVAR,
   impulse = c("R", "cas", "hosp", "rea", "dc"),
   response = NULL,
-  n.ahead = 120,
+  n.ahead = horizonIRFFEVD,
   ortho = TRUE,
   cumulative = TRUE,
   boot = TRUE,
@@ -726,8 +728,9 @@ gIRF <- multiple_varirf %>%
   geom_hline(yintercept = 0, color = "black") +
   geom_ribbon(aes(fill = impulse), alpha = .1) +
   geom_line(aes(color = impulse), size = 0.8) +
-  theme_bw() + scale_color_viridis(discrete = TRUE) + scale_fill_viridis(discrete =
-                                                                           TRUE) +
+  theme_pubr(base_size = 8) +
+  scale_color_viridis(discrete = TRUE) +
+  scale_fill_viridis(discrete = TRUE) +
   ggtitle("Fonctions impulsion-réponse orthogonalisées du modèle EpiVAR") +
   facet_grid(factor(impulse, levels = c("r", "cas", "hosp", "rea", "dc")) ~
                factor(response, levels = c("r", "cas", "hosp", "rea", "dc")),
@@ -745,12 +748,10 @@ gIRF <- multiple_varirf %>%
     labels = NULL
   )) +
   theme(
-    plot.title = element_text(size = 11, face = "bold", hjust = 0.5),
-    axis.title.y = element_text(size = 11)
-  ) +
+    plot.title = element_text(size = 11, face = "bold", hjust = 0.5) ) +
   labs(
-    x = "jours",
-    y = "écart en %",
+    x = "Jours après le choc",
+    y = "Ecart à la moyenne en points de %",
     fill = "Chocs",
     color = "Chocs",
     caption = "Les intervalles de confiance sont les 5ème et 95ème percentiles de la distribution obtenue par boostrapp. \nSource: Santé Publique France. \nModèle et calculs : P. Aldama @paldama."
@@ -769,9 +770,9 @@ print(gIRF)
 #################################################
 
 fevd <- fevd(EpiVAR,
-             n.ahead = 60)
+             n.ahead = horizonIRFFEVD)
 fevd_df <- as.data.frame(lapply(fevd, unlist)) %>%
-  mutate(period = c(1:60)) %>%
+  mutate(period = c(1:horizonIRFFEVD)) %>%
   pivot_longer(
     cols = !period,
     names_to = c("response", "impulse"),
@@ -784,12 +785,11 @@ gFEVD <- fevd_df %>%
   ggplot(aes(x = period, y = values, fill = impulse)) +
   geom_area(stat = "identity",
             position = "stack") +
-  theme_bw() + scale_fill_viridis(discrete = TRUE) +
+  theme_pubr(base_size = 8) + scale_fill_viridis(discrete = TRUE) +
   ggtitle(
     "Décomposition de la variance de l'erreur de prévision selon les chocs dans le modèle EpiVAR"
   ) +
-  facet_wrap(factor(response, levels = c("R", "cas", "hosp", "rea", "dc")) ~
-               .) +
+  facet_grid(.~factor(response, levels = c("R", "cas", "hosp", "rea", "dc")) ) +
   theme(
     plot.title = element_text(size = 11, face = "bold", hjust = 0.5),
     axis.title.y = element_text(size = 11)
@@ -807,8 +807,8 @@ ggsave(
   plot = gFEVD,
   bg = "white",
   width = 8,
-  height = 8
+  height = 4
 )
 }
 
-rmarkdown::render("test1.Rmd")
+rmarkdown::render("OutputEpiVAR.Rmd")
