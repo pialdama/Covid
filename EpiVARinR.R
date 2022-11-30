@@ -16,7 +16,7 @@ exit <- function() {
   invokeRestart("abort")
 }
 
-ComputeIRFandFEVD<-1 # produire les graphiques d'IRF et de FEVD
+ComputeIRFandFEVD<-0 # produire les graphiques d'IRF et de FEVD
 
 ####################################################
 # Telechargement et préparation des données
@@ -70,9 +70,9 @@ dbspf <-
   filter(dbspf, dbspf$date > "2020-06-01" & dbspf$date <= LastObs)
 
 gCorrectionJoursFeries <- ggplot(data = dbspf) +
-  geom_line(aes(x = date, y = pos_7j / 7, color = "Brut")) +
-  geom_line(aes(x = date, y = posAdj, color = "Corrigé des jours fériés")) +
-  scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
+  geom_line(aes(x = date, y = pos_7j / 7, color = "Brut"), size=0.4) +
+  geom_line(aes(x = date, y = posAdj, color = "Corrigé des jours fériés"), size=.8) +
+  scale_y_log10(labels = label_number(suffix = " k", scale = 1e-3)) +
   scale_x_date(date_label = "%Y-%m") +
   theme_pubr(base_size = 8) +
   theme(legend.position = "bottom") +
@@ -82,7 +82,7 @@ gCorrectionJoursFeries <- ggplot(data = dbspf) +
   labs(
     y = NULL,
     x = NULL,
-    title = "Nombre de cas positifs, moyenne sur 7 jours glissants",
+    title = "Nombre de cas positifs, moyenne sur 7 jours glissants (échelle log en base 10)",
     caption = "Notes : correction des jours fériés d'après la méthode SPF. \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama"
   )
 print(gCorrectionJoursFeries)
@@ -124,7 +124,7 @@ dbspf$REpiEstim <- dbspf$`Mean(R)`
 
 gRcompare <- ggplot(data = filter(dbspf, dbspf$date > "2020-07-01")) +
   geom_line(aes(x = date, y = REpiEstim, color = "R: EpiEstim"), size =1) +
-  geom_line(aes(x = date, y = R, color = "R: SPF"), linetype="solid", size = 0.7) +
+  geom_point(aes(x = date, y = R, color = "R: SPF"), linetype="solid", size = 0.7) +
   geom_line(aes(x = date, y = Re, color = "R: Moy. mobile de la croissance hebdomadaire"),size = 0.3) +
   geom_hline(yintercept = 1, size = 0.3) +
   scale_x_date(date_label = "%Y-%m") +
@@ -143,7 +143,7 @@ gRcompare <- ggplot(data = filter(dbspf, dbspf$date > "2020-07-01")) +
     title = "Estimation du taux de reproduction effectif et comparaison à la mesure SPF",
     caption = "Notes : calcul du R effectif à partir du package EpiEstim (mean_si = 5.5, std_si = 1.5). \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama"
   ) +
-  theme_pubr(base_size = 8) + theme(legend.position = "down")
+  theme_pubr(base_size = 8) + theme(legend.position = "bottom")
 print(gRcompare)
 ggsave(
   "./gRcompare.png",
@@ -202,6 +202,7 @@ gCas<-ggplot(data = db) +
       "Moy. glissante 7 jours" = "black",
       "Lissage LOESS" = "red")
   ) + 
+  scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
   theme_pubr(base_size = 8) +
   labs(title = "Cas positifs (corrigés des jours fériés)",y=NULL,x=NULL)
 
@@ -217,6 +218,7 @@ gHosp<-ggplot(data = db) +
       "Moy. glissante 7 jours" = "black",
       "Lissage LOESS" = "red")
   ) + 
+  scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
   theme_pubr(base_size = 8) +
   labs(title = "Lits en hospitalisation conventionnelle",y=NULL,x=NULL)
 
@@ -270,7 +272,7 @@ ggsave(
 ####################################################
 
 # Parametres: NB de lags du VAR et niveau de l'intervalle de confiance pour la prevision
-nlags <- 21
+nlags <- 28
 ConfidenceLevel <- 0.9
 
 # Preparation du dataset
@@ -318,11 +320,11 @@ if (max(roots(EpiVAR)) < 1) {
   exit()
 }
 
-#checkresiduals(EpiVAR$varresult$R,lag=nlags)
-# checkresiduals(EpiVAR$varresult$cas,lag=nlags)
-# checkresiduals(EpiVAR$varresult$hosp,lag=nlags)
-# checkresiduals(EpiVAR$varresult$rea,lag=nlags)
-# checkresiduals(EpiVAR$varresult$dc,lag=nlags)
+ checkresiduals(EpiVAR$varresult$R)
+ checkresiduals(EpiVAR$varresult$cas)
+ checkresiduals(EpiVAR$varresult$hosp)
+ checkresiduals(EpiVAR$varresult$rea)
+ checkresiduals(EpiVAR$varresult$dc)
 
 # Forecasts
 Forecast <- predict(EpiVAR,
@@ -440,6 +442,7 @@ ForecastOutOFSample_df <-
 ######################################
 
 gR <- ggplot(data = Forecast_df) +
+  geom_point(aes(x = date, y = R ), color="grey") +
   geom_line(aes(x = date, y = REpiEstim, color = "Tendance")) +
   geom_line(aes(x = date, y = R.fcst, color = "Projection")) +
   geom_ribbon(aes(
@@ -481,7 +484,7 @@ gR <- ggplot(data = Forecast_df) +
   labs(x = NULL, y = NULL , title = "Taux de reproduction effectif (Reff)")
 
 gcas <- ggplot(data = Forecast_df) +
-  geom_col(aes(x = date, y = cas), fill = "grey", alpha = 0.4) +
+  geom_point(aes(x = date, y = posAdj), color = "grey") +
   geom_line(aes(x = date, y = cas_sm, color = "Tendance")) +
   geom_line(aes(x = date, y = cas.fcst, color = "Projection")) +
   geom_ribbon(
@@ -523,10 +526,10 @@ gcas <- ggplot(data = Forecast_df) +
   scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
   scale_x_date(date_label = "%Y-%m") +
   theme_pubr(base_size = 8) + theme(plot.title = element_text(size = 11)) +
-  labs(x = NULL, y = NULL , title = "Cas confirmés (date de prélèvement)")
+  labs(x = NULL, y = NULL , title = "Cas confirmés sur 7j (date de prélèvement)")
 
 ghosp <- ggplot(data = Forecast_df) +
-  geom_col(aes(x = date, y = hospmean), fill = "grey", alpha = 0.4) +
+  geom_point(aes(x = date, y = hospmean), color = "grey") +
   geom_line(aes(x = date, y = hosp_sm, color = "Tendance")) +
   geom_line(aes(x = date, y = hosp.fcst, color = "Projection")) +
   geom_ribbon(
@@ -566,7 +569,7 @@ ghosp <- ggplot(data = Forecast_df) +
   labs(x = NULL, y = NULL,  title = "Lits en hospitalisation conventionnelle")
 
 grea <- ggplot(data = Forecast_df) +
-  geom_col(aes(x = date, y = reamean), fill = "grey", alpha = 0.4) +
+  geom_point(aes(x = date, y = reamean), color = "grey") +
   geom_line(aes(x = date, y = rea_sm, color = "Tendance")) +
   geom_line(aes(x = date, y = rea.fcst, color = "Projection")) +
   geom_ribbon(aes(x = date, ymin = rea.fcstLow, ymax = rea.fcstUp),
@@ -604,7 +607,7 @@ grea <- ggplot(data = Forecast_df) +
   labs(x = NULL, y = NULL , title = "Lits en soins critiques")
 
 gdc <- ggplot(data = Forecast_df) +
-  geom_col(aes(x = date, y = dc), fill = "grey", alpha = 0.4) +
+  geom_point(aes(x = date, y = dc), color = "grey") +
   geom_line(aes(x = date, y = dc_sm, color = "Tendance")) +
   geom_line(aes(x = date, y = dc.fcst, color = "Projection")) +
   geom_ribbon(aes(x = date, ymin = dc.fcstLow, ymax = dc.fcstUp),
