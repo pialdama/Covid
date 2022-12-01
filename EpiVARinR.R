@@ -17,6 +17,7 @@ exit <- function() {
 }
 
 ComputeIRFandFEVD<-0 # produire les graphiques d'IRF et de FEVD
+lissageLOESS<-1 # si 0 pas de lissage LOESS des series
 
 ####################################################
 # Telechargement et préparation des données
@@ -175,80 +176,83 @@ db <- dbspf %>%
   filter(date >= "2020-07-01")  %>%
   na.pass()
 
+
+
 # Lissage
 db$index <- 1:nrow(db)
 
 paramAlign <- "right"
 
 db <- db %>%
-  mutate(hospmean = rollapply(hosp, 7, sum, align = paramAlign, fill =
-                                NA) / 7) %>%
-  mutate(reamean = rollapply(rea, 7, sum, align = paramAlign, fill = NA) /
-           7) %>%
-  mutate(incid_dchospmean = rollapply(incid_dchosp, 7, sum, align = paramAlign, fill =
-                                        NA) / 7)
+  mutate(hosp_mean = rollapply(hosp, 7, sum, align = paramAlign, fill =NA) / 7) %>%
+  mutate(rea_mean = rollapply(rea, 7, sum, align = paramAlign, fill = NA) /7) %>%
+  mutate(dc_mean = rollapply(incid_dchosp, 7, sum, align = paramAlign, fill =NA) / 7) %>%
+  mutate(cas = pos) %>%
+  mutate(cas_mean = posAdj) %>%
+  mutate(dc = incid_dchosp)
 
-db$cas <- db$pos
-db$cas_sm <- db$posAdj
-cas_sm_model <- loess(cas_sm ~ index, data = db , span = 0.05)
-db$cas_sm <-
-  predict(cas_sm_model, newdata = db, na.action = na.exclude)
+# Lissage LOESS
+if (lissageLOESS==1){
+  cas_sm_model <- loess(cas_mean ~ index, data = db , span = 0.05)
+  db$cas_sm <-predict(cas_sm_model, newdata = db, na.action = na.exclude)
+  
+  hosp_sm_model <- loess(hosp_mean ~ index, data = db , span = 0.05)
+  db$hosp_sm <- predict(hosp_sm_model, newdata = db, na.action = na.exclude)
+  
+  rea_sm_model <- loess(rea_mean ~ index, data = db , span = 0.05)
+  db$rea_sm <-predict(rea_sm_model, newdata = db, na.action = na.exclude)
+  
+  dc_sm_model <- loess(dc ~ index, data = db , span = 0.05)
+  db$dc_sm <-predict(dc_sm_model, newdata = db, na.action = na.exclude)
+} 
+
+# Pas de lissage LOESS
+if (lissageLOESS==0){
+  db$cas_sm <- db$cas_mean
+  db$hosp_sm <- db$hosp_mean
+  db$rea_sm <-db$rea_mean
+  db$dc_sm <-db$dc_mean
+} 
+
+# Graphs
 gCas<-ggplot(data = db) +
-  geom_point(aes(x = date, y = posAdj, color = "Moy. glissante 7 jours")) +
-  geom_line(aes(x = date, y = cas_sm, color = "Lissage LOESS")) +
-  scale_color_manual(
-    name = "",
-    values = c(
-      "Moy. glissante 7 jours" = "black",
-      "Lissage LOESS" = "red")
-  ) + 
+  geom_point(aes(x = date, y = cas, color = "Brut")) +
+  geom_line(aes(x = date, y = cas_sm, color = "Tendance")) +
+  scale_color_manual(name = "",
+                     values = c("Brut" = "black",
+                                "Tendance" = "red")) + 
   scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
   theme_pubr(base_size = 8) +
   labs(title = "Cas positifs (corrigés des jours fériés)",y=NULL,x=NULL)
 
-hosp_sm_model <- loess(hospmean ~ index, data = db , span = 0.05)
-db$hosp_sm <-
-  predict(hosp_sm_model, newdata = db, na.action = na.exclude)
 gHosp<-ggplot(data = db) +
-  geom_point(aes(x = date, y = hosp, color ="Moy. glissante 7 jours")) +
-  geom_line(aes(x = date, y = hosp_sm, color = "Lissage LOESS")) +
-  scale_color_manual(
-    name = "",
-    values = c(
-      "Moy. glissante 7 jours" = "black",
-      "Lissage LOESS" = "red")
-  ) + 
+  geom_point(aes(x = date, y = hosp, color ="Brut")) +
+  geom_line(aes(x = date, y = hosp_sm, color = "Tendance")) +
+  scale_color_manual(name = "",
+                     values = c("Brut" = "black",
+                                "Tendance" = "red")) + 
   scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
   theme_pubr(base_size = 8) +
   labs(title = "Lits en hospitalisation conventionnelle",y=NULL,x=NULL)
 
-rea_sm_model <- loess(reamean ~ index, data = db , span = 0.05)
-db$rea_sm <-
-  predict(rea_sm_model, newdata = db, na.action = na.exclude)
 gRea<-ggplot(data = db) +
-  geom_point(aes(x = date, y = reamean, color ="Moy. glissante 7 jours")) +
-  geom_line(aes(x = date, y = rea_sm, color = "Lissage LOESS")) +
-  scale_color_manual(
-    name = "",
-    values = c(
-      "Moy. glissante 7 jours" = "black",
-      "Lissage LOESS" = "red")
-  ) + 
+  geom_point(aes(x = date, y = rea, color ="Brut")) +
+  geom_line(aes(x = date, y = rea_sm, color = "Tendance")) +
+  scale_color_manual(name = "",
+                     values = c("Brut" = "black",
+                                "Tendance" = "red")) + 
   theme_pubr(base_size = 8) +
   labs(title = "Lits en soins critiques",y=NULL,x=NULL)
 
-db$dc <- db$incid_dchospmean
-dc_sm_model <- loess(dc ~ index, data = db , span = 0.05)
-db$dc_sm <-
-  predict(dc_sm_model, newdata = db, na.action = na.exclude)
+
 gDeces<-ggplot(data = db) +
-  geom_point(aes(x = date, y = dc, color = "Moy. glissante 7 jours")) +
-  geom_line(aes(x = date, y = dc_sm, color = "Lissage LOESS")) +
+  geom_point(aes(x = date, y = dc, color = "Brut")) +
+  geom_line(aes(x = date, y = dc_sm, color = "Tendance")) +
   scale_color_manual(
     name = "",
     values = c(
-      "Moy. glissante 7 jours" = "black",
-      "Lissage LOESS" = "red")
+      "Brut" = "black",
+      "Tendance" = "red")
   ) + 
   theme_pubr(base_size = 8) +
   labs(title = "Décès hospitaliers",y=NULL,x=NULL)
@@ -484,7 +488,7 @@ gR <- ggplot(data = Forecast_df) +
   labs(x = NULL, y = NULL , title = "Taux de reproduction effectif (Reff)")
 
 gcas <- ggplot(data = Forecast_df) +
-  geom_point(aes(x = date, y = posAdj), color = "grey") +
+  geom_point(aes(x = date, y = cas), color = "grey") +
   geom_line(aes(x = date, y = cas_sm, color = "Tendance")) +
   geom_line(aes(x = date, y = cas.fcst, color = "Projection")) +
   geom_ribbon(
@@ -529,7 +533,7 @@ gcas <- ggplot(data = Forecast_df) +
   labs(x = NULL, y = NULL , title = "Cas confirmés sur 7j (date de prélèvement)")
 
 ghosp <- ggplot(data = Forecast_df) +
-  geom_point(aes(x = date, y = hospmean), color = "grey") +
+  geom_point(aes(x = date, y = hosp), color = "grey") +
   geom_line(aes(x = date, y = hosp_sm, color = "Tendance")) +
   geom_line(aes(x = date, y = hosp.fcst, color = "Projection")) +
   geom_ribbon(
@@ -569,7 +573,7 @@ ghosp <- ggplot(data = Forecast_df) +
   labs(x = NULL, y = NULL,  title = "Lits en hospitalisation conventionnelle")
 
 grea <- ggplot(data = Forecast_df) +
-  geom_point(aes(x = date, y = reamean), color = "grey") +
+  geom_point(aes(x = date, y = rea), color = "grey") +
   geom_line(aes(x = date, y = rea_sm, color = "Tendance")) +
   geom_line(aes(x = date, y = rea.fcst, color = "Projection")) +
   geom_ribbon(aes(x = date, ymin = rea.fcstLow, ymax = rea.fcstUp),
