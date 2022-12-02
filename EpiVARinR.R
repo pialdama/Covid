@@ -17,8 +17,8 @@ exit <- function() {
 }
 
 ComputeIRFandFEVD<-0 # produire les graphiques d'IRF et de FEVD
-lissageHosp<-0
-lissageLOESS<-1 # si 0 pas de lissage LOESS des series
+lissageHosp <- 0
+lissageLOESS <- 1 # si 0 pas de lissage LOESS des series
 
 ####################################################
 # Telechargement et préparation des données
