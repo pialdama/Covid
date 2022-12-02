@@ -17,6 +17,7 @@ exit <- function() {
 }
 
 ComputeIRFandFEVD<-0 # produire les graphiques d'IRF et de FEVD
+lissageHosp<-0
 lissageLOESS<-1 # si 0 pas de lissage LOESS des series
 
 ####################################################
@@ -183,13 +184,23 @@ db$index <- 1:nrow(db)
 
 paramAlign <- "right"
 
-db <- db %>%
+if (lissageHosp==1){db <- db %>%
   mutate(hosp_mean = rollapply(hosp, 7, sum, align = paramAlign, fill =NA) / 7) %>%
   mutate(rea_mean = rollapply(rea, 7, sum, align = paramAlign, fill = NA) /7) %>%
   mutate(dc_mean = rollapply(incid_dchosp, 7, sum, align = paramAlign, fill =NA) / 7) %>%
   mutate(cas = pos) %>%
   mutate(cas_mean = posAdj) %>%
   mutate(dc = incid_dchosp)
+} else {
+  db <- db %>%
+    mutate(hosp_mean = hosp) %>%
+    mutate(rea_mean = rea) %>%
+    mutate(dc_mean = rollapply(incid_dchosp, 7, sum, align = paramAlign, fill =NA) / 7) %>%
+    mutate(cas = pos) %>%
+    mutate(cas_mean = posAdj) %>%
+    mutate(dc = incid_dchosp) 
+}
+
 
 # Lissage LOESS
 if (lissageLOESS==1){
@@ -204,10 +215,7 @@ if (lissageLOESS==1){
   
   dc_sm_model <- loess(dc ~ index, data = db , span = 0.05)
   db$dc_sm <-predict(dc_sm_model, newdata = db, na.action = na.exclude)
-} 
-
-# Pas de lissage LOESS
-if (lissageLOESS==0){
+} else {
   db$cas_sm <- db$cas_mean
   db$hosp_sm <- db$hosp_mean
   db$rea_sm <-db$rea_mean
@@ -308,7 +316,6 @@ DataEpiVAR <- db %>%
 EpiVAR <- VAR(DataEpiVAR,
               p = nlags,
               type = "none")
-
 
 # Test de stabilité du VAR
 if (max(roots(EpiVAR)) < 1) {
