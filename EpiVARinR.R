@@ -16,8 +16,7 @@ exit <- function() {
   invokeRestart("abort")
 }
 
-ComputeIRFandFEVD<-0 # produire les graphiques d'IRF et de FEVD
-lissageHosp <- 0
+ComputeIRFandFEVD<-1 # produire les graphiques d'IRF et de FEVD
 lissageLOESS <- 1 # si 0 pas de lissage LOESS des series
 
 ####################################################
@@ -112,20 +111,25 @@ incid$index <- 1:nrow(incid)
 SmoothIncid <- loess(I ~ index, data = incid, span = 0.05)
 incid$I <- SmoothIncid$fitted
 
+# Source des estimatons d'interval seriel et ecart-type estimé
+# https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7448781/
+mu_si <- 5.19
+sd_si <- (6.02-5.19)/1.96
+
 Restim <- estimate_R(incid,
                      method = "parametric_si",
-                     config = make_config(list(mean_si = 5.5,
-                                               std_si = 1.5)))
+                     config = make_config(list(mean_si = mu_si,
+                                               std_si = sd_si)))
 RestimData <- Restim$R
 RestimData$date <- seq(from = as.Date(min(incid$dates) + 7),
                        to = as.Date(max(incid$dates)),
                        by = 'day')
 dbspf <- full_join(RestimData, dbspf)
-dbspf$REpiEstim <- dbspf$`Mean(R)`
+dbspf$R_sm <- dbspf$`Mean(R)`
 
 
 gRcompare <- ggplot(data = filter(dbspf, dbspf$date > "2020-07-01")) +
-  geom_line(aes(x = date, y = REpiEstim, color = "R: EpiEstim"), size =1) +
+  geom_line(aes(x = date, y = R_sm, color = "R: EpiEstim"), size =1) +
   geom_point(aes(x = date, y = R, color = "R: SPF"), linetype="solid", size = 0.7) +
   geom_line(aes(x = date, y = Re, color = "R: Moy. mobile de la croissance hebdomadaire"),size = 0.3) +
   geom_hline(yintercept = 1, size = 0.3) +
@@ -143,7 +147,7 @@ gRcompare <- ggplot(data = filter(dbspf, dbspf$date > "2020-07-01")) +
     y = "R",
     x = NULL,
     title = "Estimation du taux de reproduction effectif et comparaison à la mesure SPF",
-    caption = "Notes : calcul du R effectif à partir du package EpiEstim (mean_si = 5.5, std_si = 1.5). \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama"
+    caption = "Notes : calcul du R effectif à partir du package EpiEstim (mean_si = 5.19, std_si = 0.42). \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama"
   ) +
   theme_pubr(base_size = 8) + theme(legend.position = "bottom")
 print(gRcompare)
@@ -164,7 +168,7 @@ db <- dbspf %>%
       date,
       Re,
       R,
-      REpiEstim,
+      R_sm,
       pos,
       posAdj,
       hosp,
@@ -184,33 +188,21 @@ db$index <- 1:nrow(db)
 
 paramAlign <- "right"
 
-if (lissageHosp==1){db <- db %>%
-  mutate(hosp_mean = rollapply(hosp, 7, sum, align = paramAlign, fill =NA) / 7) %>%
-  mutate(rea_mean = rollapply(rea, 7, sum, align = paramAlign, fill = NA) /7) %>%
-  mutate(dc_mean = rollapply(incid_dchosp, 7, sum, align = paramAlign, fill =NA) / 7) %>%
-  mutate(cas = pos) %>%
-  mutate(cas_mean = posAdj) %>%
-  mutate(dc = incid_dchosp)
-} else {
   db <- db %>%
-    mutate(hosp_mean = hosp) %>%
-    mutate(rea_mean = rea) %>%
     mutate(dc_mean = rollapply(incid_dchosp, 7, sum, align = paramAlign, fill =NA) / 7) %>%
     mutate(cas = pos) %>%
     mutate(cas_mean = posAdj) %>%
     mutate(dc = incid_dchosp) 
-}
-
 
 # Lissage LOESS
 if (lissageLOESS==1){
   cas_sm_model <- loess(cas_mean ~ index, data = db , span = 0.05)
   db$cas_sm <-predict(cas_sm_model, newdata = db, na.action = na.exclude)
   
-  hosp_sm_model <- loess(hosp_mean ~ index, data = db , span = 0.05)
+  hosp_sm_model <- loess(hosp ~ index, data = db , span = 0.05)
   db$hosp_sm <- predict(hosp_sm_model, newdata = db, na.action = na.exclude)
   
-  rea_sm_model <- loess(rea_mean ~ index, data = db , span = 0.05)
+  rea_sm_model <- loess(rea ~ index, data = db , span = 0.05)
   db$rea_sm <-predict(rea_sm_model, newdata = db, na.action = na.exclude)
   
   dc_sm_model <- loess(dc ~ index, data = db , span = 0.05)
@@ -302,7 +294,7 @@ dateFcst <-
 FirstDayFcst <- debFcst + 1
 
 DataEpiVAR <- db %>%
-  mutate(R =  log(REpiEstim/lag(REpiEstim, 1)))  %>%
+  mutate(R =  log(R_sm/lag(R_sm, 1)))  %>%
   mutate(cas = log(cas_sm / lag(cas_sm, 1))) %>%
   mutate(hosp = log(hosp_sm / lag(hosp_sm, 1))) %>%
   mutate(rea = log(rea_sm / lag(rea_sm, 1))) %>%
@@ -349,9 +341,9 @@ Forecast_df <- as.data.frame(lapply(Forecast$fcst, unlist)) %>%
     exp(cumsum(x))) %>%
   mutate(date = dateFcst) %>%
   full_join(db, Forecast_df, by = "date") %>%
-  mutate(R.fcst = R.fcst * REpiEstim[date == debFcst]) %>%
-  mutate(R.fcstUp = R.upper * REpiEstim[date == debFcst]) %>%
-  mutate(R.fcstLow = R.lower * REpiEstim[date == debFcst]) %>%
+  mutate(R.fcst = R.fcst * R_sm[date == debFcst]) %>%
+  mutate(R.fcstUp = R.upper * R_sm[date == debFcst]) %>%
+  mutate(R.fcstLow = R.lower * R_sm[date == debFcst]) %>%
   mutate(cas.fcst = cas.fcst * cas_sm[date == debFcst]) %>%
   mutate(cas.fcstUp = cas.upper * cas_sm[date == debFcst]) %>%
   mutate(cas.fcstLow = cas.lower * cas_sm[date == debFcst]) %>%
@@ -366,6 +358,7 @@ Forecast_df <- as.data.frame(lapply(Forecast$fcst, unlist)) %>%
   mutate(dc.fcstLow = dc.lower * dc_sm[date == debFcst]) %>%
   arrange(desc(date)) %>%
   filter(date >= as.Date(LastObs - LengthGraph))
+
 
 ####################################################
 # Estimation et forecast out-of-sample
@@ -387,7 +380,7 @@ dateFcst <-
 FirstDayFcst <- debFcst + 1
 
 DataEpiVAR <- db %>%
-  mutate(R =  log(REpiEstim/lag(REpiEstim, 1)))  %>%
+  mutate(R =  log(R_sm/lag(R_sm, 1)))  %>%
   mutate(cas = log(cas_sm / lag(cas_sm, 1))) %>%
   mutate(hosp = log(hosp_sm / lag(hosp_sm, 1))) %>%
   mutate(rea = log(rea_sm / lag(rea_sm, 1))) %>%
@@ -430,9 +423,9 @@ ForecastOutOFSample_df <-
     exp(cumsum(x))) %>%
   mutate(date = dateFcst) %>%
   full_join(db, ForecastOutOFSample_df, by = "date") %>%
-  mutate(R.fcst = R.fcst * REpiEstim[date == debFcst]) %>%
-  mutate(R.fcstUp = R.upper * REpiEstim[date == debFcst]) %>%
-  mutate(R.fcstLow = R.lower * REpiEstim[date == debFcst]) %>%
+  mutate(R.fcst = R.fcst * R_sm[date == debFcst]) %>%
+  mutate(R.fcstUp = R.upper * R_sm[date == debFcst]) %>%
+  mutate(R.fcstLow = R.lower * R_sm[date == debFcst]) %>%
   mutate(cas.fcst = cas.fcst * cas_sm[date == debFcst]) %>%
   mutate(cas.fcstUp = cas.upper * cas_sm[date == debFcst]) %>%
   mutate(cas.fcstLow = cas.lower * cas_sm[date == debFcst]) %>%
@@ -452,9 +445,10 @@ ForecastOutOFSample_df <-
 # Plots
 ######################################
 
+
 gR <- ggplot(data = Forecast_df) +
-  geom_point(aes(x = date, y = R ), color="grey") +
-  geom_line(aes(x = date, y = REpiEstim, color = "Tendance")) +
+  geom_point(aes(x = date, y = R), color = "grey") +
+  geom_line(aes(x = date, y = R_sm, color = "Tendance")) +
   geom_line(aes(x = date, y = R.fcst, color = "Projection")) +
   geom_ribbon(aes(
     x = date,
@@ -530,14 +524,14 @@ gcas <- ggplot(data = Forecast_df) +
   scale_fill_manual(
     name = "",
     values = c(
-      "Intervalle de prévision" = "blue" ,
+      "Intervalle de prévision" = "blue",
       "Intervalle de prévision out-of-sample" = "red"
     )
   ) +
   scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
   scale_x_date(date_label = "%Y-%m") +
   theme_pubr(base_size = 8) + theme(plot.title = element_text(size = 11)) +
-  labs(x = NULL, y = NULL , title = "Cas confirmés sur 7j (date de prélèvement)")
+  labs(x = NULL, y = NULL , title = "Cas confirmés (date de prélèvement)")
 
 ghosp <- ggplot(data = Forecast_df) +
   geom_point(aes(x = date, y = hosp), color = "grey") +

@@ -2,7 +2,10 @@
 title: "Projection EpiVAR pour le suivi de l'épidémie de Covid en France"
 author: "Pierre Aldama"
 date: "`r Sys.Date()`"
-output: rmarkdown::html_vignette
+output:
+  html_document:
+    keep_md: yes
+  pdf_document: default
 vignette: >
   %\VignetteIndexEntry{OutputEpiVAR}
   %\VignetteEngine{knitr::rmarkdown}
@@ -42,7 +45,7 @@ Une autre façon de considérer ces propriétés est de calculer la décompositi
 On commence tout d'abord par appliquer [la correction des jours fériés proposées par Santé Publique France](https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=&ved=2ahUKEwj9qp2S9c77AhX-YqQEHTuxBXMQFnoECBMQAQ&url=https%3A%2F%2Fwww.santepubliquefrance.fr%2Fcontent%2Fdownload%2F335872%2Ffile%2Fnote_methodo_jours_feries_15042021.pdf&usg=AOvVaw3ECFJ89paSOP0w638FRzvD).
 
 ![](gCorrectionJoursFeries.png){width=100%}
-On calcule ensuite le taux de reproduction effectif à partir du package EpiEstim, car la série temporelle du taux de reproduction effectif fournie par SPF s'arrête plus tôt que celle du nombre de cas confirmés. On calcule un taux de reproduction sous l'hypothèse d'une moyenne de l'intervalle sériel $\mu = 5.5$ et un écart-type $\sigma = 1.5$. Pour ce calcul, on se base sur la série de cas confirmés en moyenne mobile sur 7 jours et corrigée des jours fériés.
+On calcule ensuite le taux de reproduction effectif à partir du package EpiEstim, car la série temporelle du taux de reproduction effectif fournie par SPF s'arrête plus tôt que celle du nombre de cas confirmés. On calcule un taux de reproduction sous l'hypothèse d'une moyenne de l'intervalle sériel $\mu = 5.19$ et un écart-type $\sigma = 0.42$, basé sur une méta-analyse des estimations disponibles.^[Voir https://www.ncbi.nlm.nih.gov/pmc/articles/PMC7448781/] Pour ce calcul, on se base sur la série de cas confirmés en moyenne mobile sur 7 jours et corrigée des jours fériés.
 
 ![](gRcompare.png){width=100%}
 
