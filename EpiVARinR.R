@@ -16,7 +16,8 @@ exit <- function() {
   invokeRestart("abort")
 }
 
-ComputeIRFandFEVD<-1 # produire les graphiques d'IRF et de FEVD
+VARFirstDiff <- 1 
+ComputeIRFandFEVD <- 0 # produire les graphiques d'IRF et de FEVD
 lissageLOESS <- 1 # si 0 pas de lissage LOESS des series
 
 ####################################################
@@ -150,6 +151,8 @@ gRcompare <- ggplot(data = filter(dbspf, dbspf$date > "2020-07-01")) +
     caption = "Notes : calcul du R effectif à partir du package EpiEstim (mean_si = 5.19, std_si = 0.42). \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama"
   ) +
   theme_pubr(base_size = 8) + theme(legend.position = "bottom")
+
+
 print(gRcompare)
 ggsave(
   "./gRcompare.png",
@@ -275,8 +278,6 @@ ggsave(
 # Estimation et forecast full-sample
 ####################################################
 
-# Parametres: NB de lags du VAR et niveau de l'intervalle de confiance pour la prevision
-nlags <- 28
 ConfidenceLevel <- 0.9
 
 # Preparation du dataset
@@ -292,19 +293,34 @@ dateFcst <-
     by = 'day'
   )
 FirstDayFcst <- debFcst + 1
-
-DataEpiVAR <- db %>%
-  mutate(R =  log(R_sm/lag(R_sm, 1)))  %>%
-  mutate(cas = log(cas_sm / lag(cas_sm, 1))) %>%
-  mutate(hosp = log(hosp_sm / lag(hosp_sm, 1))) %>%
-  mutate(rea = log(rea_sm / lag(rea_sm, 1))) %>%
-  mutate(dc = log(dc_sm / lag(dc_sm, 1))) %>%
-  filter(date < LastObs - OutofSample) %>%
-  subset(select = c(R, cas, hosp, rea, dc)) %>%
-  na.omit %>%
-  ts()
+ if (VARFirstDiff==1){
+   DataEpiVAR <- db %>%
+   mutate(R =  log(R_sm/lag(R_sm, 1)))  %>%
+   mutate(cas = log(cas_sm / lag(cas_sm, 1))) %>%
+   mutate(hosp = log(hosp_sm / lag(hosp_sm, 1))) %>%
+   mutate(rea = log(rea_sm / lag(rea_sm, 1))) %>%
+   mutate(dc = log(dc_sm / lag(dc_sm, 1))) %>%
+   filter(date < LastObs - OutofSample) %>%
+   subset(select = c(R, cas, hosp, rea, dc)) %>%
+   na.omit %>%
+   ts()
+   } else {
+     DataEpiVAR <- db %>%
+       mutate(R =  log(R_sm))  %>%
+       mutate(cas = log(cas_sm )) %>%
+       mutate(hosp = log(hosp_sm)) %>%
+       mutate(rea = log(rea_sm )) %>%
+       mutate(dc = log(dc_sm )) %>%
+       filter(date < LastObs - OutofSample) %>%
+       subset(select = c(R, cas, hosp, rea, dc)) %>%
+       na.omit %>%
+       ts()
+   }
 
 # Estimation VAR
+OptimalLag<-VARselect(DataEpiVAR,lag.max = 50, type=c("none"))
+nlags<-max(OptimalLag$selection)
+
 EpiVAR <- VAR(DataEpiVAR,
               p = nlags,
               type = "none")
@@ -379,16 +395,29 @@ dateFcst <-
 
 FirstDayFcst <- debFcst + 1
 
-DataEpiVAR <- db %>%
-  mutate(R =  log(R_sm/lag(R_sm, 1)))  %>%
-  mutate(cas = log(cas_sm / lag(cas_sm, 1))) %>%
-  mutate(hosp = log(hosp_sm / lag(hosp_sm, 1))) %>%
-  mutate(rea = log(rea_sm / lag(rea_sm, 1))) %>%
-  mutate(dc = log(dc_sm / lag(dc_sm, 1))) %>%
-  filter(date < LastObs - OutofSample) %>%
-  subset(select = c(R, cas, hosp, rea, dc)) %>%
-  na.omit %>%
-  ts()
+if (VARFirstDiff==1){
+  DataEpiVAR <- db %>%
+    mutate(R =  log(R_sm/lag(R_sm, 1)))  %>%
+    mutate(cas = log(cas_sm / lag(cas_sm, 1))) %>%
+    mutate(hosp = log(hosp_sm / lag(hosp_sm, 1))) %>%
+    mutate(rea = log(rea_sm / lag(rea_sm, 1))) %>%
+    mutate(dc = log(dc_sm / lag(dc_sm, 1))) %>%
+    filter(date < LastObs - OutofSample) %>%
+    subset(select = c(R, cas, hosp, rea, dc)) %>%
+    na.omit %>%
+    ts()
+} else {
+  DataEpiVAR <- db %>%
+    mutate(R =  log(R_sm))  %>%
+    mutate(cas = log(cas_sm )) %>%
+    mutate(hosp = log(hosp_sm)) %>%
+    mutate(rea = log(rea_sm )) %>%
+    mutate(dc = log(dc_sm )) %>%
+    filter(date < LastObs - OutofSample) %>%
+    subset(select = c(R, cas, hosp, rea, dc)) %>%
+    na.omit %>%
+    ts()
+}
 
 # Estimation VAR
 EpiVAR <- VAR(DataEpiVAR,
@@ -697,11 +726,15 @@ if (ComputeIRFandFEVD==1) {
 ######################################
 
 horizonIRFFEVD<-60  
-  
-download.file(
-  "https://raw.githubusercontent.com/anguyen1210/var-tools/master/R/extract_varirf.R",
-  "./extract_varirf.R"
-)
+
+if (file.exists("./extract_varirf.R")){ } else 
+  {
+    download.file(
+      "https://raw.githubusercontent.com/anguyen1210/var-tools/master/R/extract_varirf.R",
+      "./extract_varirf.R"
+    )
+    }  
+
 source("./extract_varirf.R")
 
 irf <- irf(
