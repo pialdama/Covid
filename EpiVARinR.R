@@ -852,4 +852,5 @@ ggsave(
 )
 }
 
-rmarkdown::render("OutputEpiVAR.Rmd")
+rmarkdown::render(input = "OutputEpiVAR.Rmd", output_format = "html_document")
+rmarkdown::render(input = "OutputEpiVAR.Rmd", output_format = "pdf_document")
