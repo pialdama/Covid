@@ -6,11 +6,10 @@ library(vars)
 library(scales)
 library(forecast)
 library(rmarkdown)
+library(here)
 
 
-current_path = rstudioapi::getActiveDocumentContext()$path
-setwd(dirname(current_path))
-print(getwd())
+if (getwd()!=here()){setwd(here())}
 
 exit <- function() {
   invokeRestart("abort")
