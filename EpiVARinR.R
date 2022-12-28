@@ -6,10 +6,10 @@ library(vars)
 library(scales)
 library(forecast)
 library(rmarkdown)
-library(here)
+library(rstudioapi)
 
-
-if (getwd()!=here()){setwd(here())}
+temp <- dirname(rstudioapi::getSourceEditorContext()$path)
+if (getwd()!=temp){setwd(temp)}
 
 exit <- function() {
   invokeRestart("abort")
