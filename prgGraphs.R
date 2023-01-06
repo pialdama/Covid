@@ -240,7 +240,7 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
    geom_line(aes(x=Date, y=DECES, color = "obs"),size=0.5) +
    geom_line(aes(x=Date, y=DecesAttendus, color = "fit"),size=1) +
    scale_color_manual(name =" Nombre de décés ",
-                      labels = c("observés","attendus"),
+                      labels = c("attendus","observés"),
                       values = c("obs" = "black", "fit" = "blue"))+
    geom_ribbon(aes(x=Date, 
                    ymin = DecesAttendus , 
