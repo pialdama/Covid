@@ -6,8 +6,8 @@ library(tidyquant)
 library(ggpubr)
 library(ISOweek)
 
-setwd("./")
-
+temp <- dirname(rstudioapi::getSourceEditorContext()$path)
+if (getwd()!=temp){setwd(temp)}
 
 ##############################################################################################
 # Importe les données historiques des décés quotidiens et détaillées pour 2018-2021
@@ -55,25 +55,35 @@ db2020$CHAMP <- case_when(
 db2020$age<-db2020$ADEC-db2020$ANAIS
 
 # Import data for 2020-2021 from Insee
-db20212022 <- read.csv("./DC_20212022_det.csv",sep=";")
-db20212022$Date <- as.Date(paste(db20212022$JDEC, db20212022$MDEC,db20212022$ADEC, sep = "/"),"%d/%m/%Y")
-db20212022$CHAMP <- case_when(
-   db20212022$DEPDEC=="2A" ~ "FM",
-   db20212022$DEPDEC=="2B" ~ "FM",
-   as.numeric(db20212022$DEPDEC)<900 ~"FM" ,
+db2021 <- read.csv("./DC_2021_det.csv",sep=";")
+db2021$Date <- as.Date(paste(db2021$JDEC, db2021$MDEC,db2021$ADEC, sep = "/"),"%d/%m/%Y")
+db2021$CHAMP <- case_when(
+   db2021$DEPDEC=="2A" ~ "FM",
+   db2021$DEPDEC=="2B" ~ "FM",
+   as.numeric(db2021$DEPDEC)<900 ~"FM" ,
    TRUE ~ "OM")
-db20212022$age<-db20212022$ADEC-db20212022$ANAIS
+db2021$age<-db2021$ADEC-db2021$ANAIS
+
+# Import data for 2022-2023 from Insee
+db20222023 <- read.csv("./DC_20222023_det_V2.csv",sep=";")
+db20222023$Date <- as.Date(paste(db20222023$JDEC, db20222023$MDEC,db20222023$ADEC, sep = "/"),"%d/%m/%Y")
+db20222023$CHAMP <- case_when(
+  db20222023$DEPDEC=="2A" ~ "FM",
+  db20222023$DEPDEC=="2B" ~ "FM",
+  as.numeric(db20222023$DEPDEC)<900 ~"FM" ,
+  TRUE ~ "OM")
+db20222023$age<-db20222023$ADEC-db20222023$ANAIS
 
 # Sépare les données 2021 et 2022
-db2021 <- filter(db20212022,db20212022$ADEC==2021)
-db2022 <- filter(db20212022,db20212022$ADEC==2022)
+db2022 <- filter(db20222023,db20222023$ADEC==2022)
+db2023 <- filter(db20222023,db20222023$ADEC==2023)
 
 # Bind un dataframe complet pour 2018-2020
-db1822<-rbind.data.frame(db2018,db2019,db2020,db20212022)
-db1822$AnneeDeces<-as.character(db1822$ADEC)
-db1822$MoisDeces<-format(as.Date(db1822$Date, format="%d/%m/%Y"),"(%m) %B")
-db1822$ADEC<-as.character(db1822$ADEC)
-db1822$SEXE<-fct_recode(db1822$SEXE,
+dbfull<-rbind.data.frame(db2018,db2019,db2020,db2021,db2022,db2023)
+dbfull$AnneeDeces<-as.character(dbfull$ADEC)
+dbfull$MoisDeces<-format(as.Date(dbfull$Date, format="%d/%m/%Y"),"(%m) %B")
+dbfull$ADEC<-as.character(dbfull$ADEC)
+dbfull$SEXE<-fct_recode(dbfull$SEXE,
                         "Femme" = "F",
                         "Homme" = "M")
 
@@ -108,7 +118,7 @@ coef4<-model.Redressement$coefficients[[ 4 ]] # 1/(dist-10)^4
 ##############################################################################################
 # Merge les données quotidiennes historiques avec les fichiers 2020/21
 
-# Creer des datafram temporaires
+# Creer des dataframe temporaires
 DecesFM20 <- db2020 %>%
    filter(db2020$CHAMP=="FM") %>%
    group_by(Date) %>%
@@ -116,17 +126,35 @@ DecesFM20 <- db2020 %>%
 DecesFE20 <- db2020 %>% 
    group_by(Date) %>%
    summarise(DECES = n())
-DecesFM2122 <- db20212022 %>%
-   filter(db20212022$CHAMP=="FM") %>%
+
+DecesFM21 <- db2021 %>%
+   filter(db2021$CHAMP=="FM") %>%
    group_by(Date) %>%
    summarise(DECES = n())
-DecesFE2122 <- db20212022 %>% 
+DecesFE21 <- db2021 %>% 
    group_by(Date) %>%
    summarise(DECES = n())
 
+DecesFM22 <- db2022 %>%
+  filter(db2022$CHAMP=="FM") %>%
+  group_by(Date) %>%
+  summarise(DECES = n())
+DecesFE22 <- db2022 %>% 
+  group_by(Date) %>%
+  summarise(DECES = n())
+
+DecesFM23 <- db2023 %>%
+  filter(db2023$CHAMP=="FM") %>%
+  group_by(Date) %>%
+  summarise(DECES = n())
+DecesFE23 <- db2023 %>% 
+  group_by(Date) %>%
+  summarise(DECES = n())
+
+
 # Merge historical dataset with data for 2020 and 2021 and remove intermediate data.frame
-DecesFE<-bind_rows(DecesFE,DecesFE20,DecesFE2122)
-DecesFM<-bind_rows(DecesFM,DecesFM20,DecesFM2122)
+DecesFE<-bind_rows(DecesFE,DecesFE20,DecesFE21,DecesFE22,DecesFE23)
+DecesFM<-bind_rows(DecesFM,DecesFM20,DecesFM21,DecesFM22,DecesFM23)
 
 DecesFE$Annee<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%Y"))
 DecesFE$Mois<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%m"))
@@ -215,7 +243,7 @@ dbMerge$cose<-cos(2*pi*dbMerge$t/52)
 dbMerge$sine<-sin(2*pi*dbMerge$t/52)
 ModelPoissonBis<-glm( 
    DECES ~ t + cose + sine + inc100:Annee + lead(incid_dchosp,1),
-   data = filter(dbMerge,dbMerge$Annee >= 2014 & dbMerge$Annee <= 2022),
+   data = filter(dbMerge,dbMerge$Annee >= 2014 & dbMerge$Annee <= 2023),
    family = quasipoisson(link="log"),
    control = list(maxit = 500))
 
@@ -250,7 +278,7 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
                    ymin = DecesAttendus - 1.96*DecesAttendusSE, 
                    ymax = DecesAttendus + 1.96*DecesAttendusSE, 
                    fill="Sur/sous-mortalité normale"), alpha=0.1) +
-   scale_fill_manual(c("",""),values=c("black","blue")) +
+   scale_fill_manual(c("",""),values=c("purple","blue")) +
    theme_minimal() +
    theme(plot.title = element_text(size = 14, face = "bold"),
          plot.subtitle = element_text(size = 12),
@@ -292,7 +320,7 @@ graph.ExcesMortalite<-ggplot() +
                show.legend = FALSE,
                na.rm=TRUE,
                color = "yellow",
-               size = 1.5,
+               size = 1.25,
                span=0.1)  +
    scale_y_continuous(breaks=c(0,10000,20000,30000,40000,50000,60000))+
    scale_x_discrete(breaks = c("W05","W10","W15","W20","W25","W30", "W35","W40","W45","W50") )+
@@ -301,11 +329,11 @@ graph.ExcesMortalite<-ggplot() +
    theme(plot.title = element_text(size = 14, face = "bold"),
          plot.subtitle = element_text(size = 10),
          plot.caption = element_text(size = 10, face = "italic"),
-         legend.position = "right") +
+         legend.position = "top") +
    labs(x = NULL,
         y = NULL,
         color = "Année",
-        title = "Excés de mortalité en France en 2020, 2021 et 2022",
+        title = "Excés de mortalité en France de 2020 à 2023",
         subtitle = "La courbe jaune représente l'excés de mortalité moyen sur la période 2014-2019, principlement lié aux épidémies grippales",
         caption = "Sources : Santé Publique France, Insee et Réseau Sentinelles.\nCalculs et erreurs : P. Aldama / @paldama")
 

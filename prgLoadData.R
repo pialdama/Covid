@@ -1,5 +1,5 @@
-CurrentWorkingDir<-getwd()
-setwd(CurrentWorkingDir)
+temp <- dirname(rstudioapi::getSourceEditorContext()$path)
+if (getwd()!=temp){setwd(temp)}
 
 # Insee data on mortality 1968/2019
 url<-"https://www.insee.fr/fr/statistiques/fichier/4771989/T79JDEC.csv" 
@@ -22,7 +22,7 @@ dest <- "./sivic_donneeshospit.csv"
 sivic<- download.file(url,dest)
 
 # Insee data on mortality for 2020/2021/2022
-url<-"https://www.insee.fr/fr/statistiques/fichier/4487988/2023-01-06_detail.zip"
+url<-"https://www.insee.fr/fr/statistiques/fichier/4487988/2023-09-08_detail.zip"
 dest<-"./dataMortality.zip"
 download.file(url, dest)
 unzip(dest)
