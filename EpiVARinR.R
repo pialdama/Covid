@@ -282,7 +282,7 @@ ConfidenceLevel <- 0.9
 # Preparation du dataset
 OutofSample <- 0
 HorizonForecast <- 7 * (2)
-LengthGraph <- 4 * 30 # longueur des graphiques
+LengthGraph <- length(DataEpiVAR) # longueur des graphiques
 
 debFcst <- LastObsCas - OutofSample
 dateFcst <-
