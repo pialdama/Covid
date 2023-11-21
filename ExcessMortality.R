@@ -6,7 +6,7 @@ library(tidyquant)
 library(ggpubr)
 library(ISOweek)
 library(ggthemes)
-
+library(patchwork)
 temp <- dirname(rstudioapi::getSourceEditorContext()$path)
 if (getwd()!=temp){setwd(temp)}
 
@@ -265,22 +265,93 @@ coefTrend<-ModelPoisson$coefficients[[ 2 ]]
 coefCos<-ModelPoisson$coefficients[[ 3 ]] 
 coefSin<-ModelPoisson$coefficients[[ 4 ]] 
 coefIncidDecesCovid<-ModelPoisson$coefficients[[ 5 ]] 
+
 dbMerge$DecesAttendus <- exp((coefIntercept + coefTrend*dbMerge$t + coefCos*dbMerge$cose + coefSin*dbMerge$sine))
-dbMerge$DecesCovid <- dbMerge$DecesAttendus + lead(dbMerge$incid_dchosp)
-dbMerge$DecesCovidEstim <-exp((coefIntercept + coefTrend*dbMerge$t + coefCos*dbMerge$cose + coefSin*dbMerge$sine + coefIncidDecesCovid*lead(dbMerge$incid_dchosp,1)) ) 
+dbMerge$DecesCovid <- dbMerge$DecesAttendus+lead(dbMerge$incid_dchosp, 1)
 
 dbMerge$DecesAttendusSE <- sqrt(phiPoisson*dbMerge$DecesAttendus )
 DecesFit<-predict(ModelPoisson,newdata=dbMerge,type = c("response"))
 dbMerge<-cbind(dbMerge,DecesFit)
+dbMerge$Resid<-dbMerge$DECES-dbMerge$DecesFit
+
+
+## Defines a function to create a zoom plot:
+gg_zoom <- function(.plot, zoom_cmd, draw_box = TRUE, box_nudge = 1, to_label = FALSE, label) {
+  
+  ## use enquo for tidyeval syntax
+  zoom_cmd <- dplyr::enquo(zoom_cmd)
+  
+  ## subset data to zoom in on
+  zoom_data <-
+    .plot$data %>%
+    dplyr::filter(!!zoom_cmd) 
+  
+  ## build the "zoom plot" based on the original ggplot object
+  zoom_plot <- .plot
+  ## coerce the data element to be the filtered data
+  zoom_plot$data <- zoom_data
+  
+  ## if label  arg then add a repel text label
+  if(to_label) {
+    
+    ## tidyeval syntax allows for a bare column name to be supplied
+    label <- dplyr::enquo(label)
+    
+    zoom_plot <-
+      zoom_plot +
+      ggrepel::geom_text_repel(aes(label = !!label))
+  }
+  
+  ## if draw box then add a box around data used in zoom
+  if(draw_box) {
+    
+    ## need to get x and y variables (stored as quosures) from ggplot2 object
+    x <- .plot$mapping$x
+    y <- .plot$mapping$y
+    
+    ## create min/max x and y values for box around full plot
+    box_data <- 
+      zoom_data %>%
+      dplyr::summarise(
+        xmin = min(!!x, na.rm = TRUE),
+        xmax = max(!!x, na.rm = TRUE),
+        ymin = min(!!y, na.rm = TRUE),
+        ymax = max(!!y, na.rm = TRUE)) %>%
+      ## add to min and max so that the box sits just outside point
+      dplyr::mutate(
+        xmin = xmin -  box_nudge,
+        xmax = xmax + box_nudge,
+        ymin = ymin -  box_nudge,
+        ymax = ymax +  box_nudge)
+    
+    ## use geom_rect to add to the plot
+    .plot <-
+      .plot +
+      ggplot2::geom_rect(
+        ggplot2::aes(xmin = box_data$xmin, 
+                     xmax = box_data$xmax, 
+                     ymin = box_data$ymin, 
+                     ymax = box_data$ymax), 
+        fill = NA, 
+        col = "grey", 
+        lty = "dotted")
+    
+  }
+  
+  ## return in a basic patchwork layout
+  .plot + zoom_plot
+  
+}
 
 
 # Plot les données en time series
 gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
    geom_line(aes(x=Date, y=DECES, color = "obs"),size=0.5) +
-   geom_line(aes(x=Date, y=DecesAttendus, color = "fit"),size=1) +
+   geom_line(aes(x=Date, y=DecesAttendus, color = "attendu"),size=1) +
+    geom_line(aes(x=Date, y=DecesFit, color = "fit"),size=0.4) +
    scale_color_manual(name =" Nombre de décés ",
-                      labels = c("attendus","observés"),
-                      values = c("obs" = "black", "fit" = "blue"))+
+                      labels = c("attendus","prédits","observés"),
+                      values = c("obs" = "black", "attendu" = "blue","fit" = "green"))+
    geom_ribbon(aes(x=Date, 
                    ymin = DecesAttendus , 
                    ymax = DecesCovid, 
@@ -298,8 +369,12 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
    labs(x = NULL,
         y = NULL,
         title = "Mortalité hebdomadaire en France",
-        subtitle = "Nombre de décés observés et attendus en absence d'épidémie (grippale ou Covid19)")
+        subtitle = "Nombre de décés observés, prédits par la régression de Poisson et attendus en absence d'épidémie (grippale ou Covid19)")
 ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, bg="white", height = 7, width =10)
+print(gTimeSeriesPoisson)
+
+gg_zoom(gTimeSeriesPoisson,
+        zoom_cmd = `AnneeNum` > 2020)
 
 dbMerge$WeekNum<-substr(ISOweek(dbMerge$Date), 6, 8) 
 dbMerge$Annee<-substr(ISOweek(dbMerge$Date), 1, 4)
@@ -311,7 +386,6 @@ dbMergeBis<- dbMerge %>%
    mutate(ExcesMortaliteCumsum=cumsum(ExcesMortalite)) %>%
    ungroup() %>%
    subset(select = c(Date,ISO.week,ExcesMortaliteCumsum,WeekNum,Annee,AnneeNum))
-
 
 graph.ExcesMortalite<-ggplot() +
    geom_line(data = filter(dbMergeBis, dbMergeBis$AnneeNum>2019),
@@ -347,6 +421,8 @@ graph.ExcesMortalite<-ggplot() +
         title = "Excés de mortalité en France de 2020 à 2023",
         subtitle = "La courbe en bleu-ciel représente l'excés de mortalité moyen sur la période 2014-2019, principlement lié aux épidémies grippales",
         caption = "Sources : Santé Publique France, Insee et Réseau Sentinelles.\nCalculs et erreurs : P. Aldama / @paldama")
+
+
 
 print(graph.ExcesMortalite)
 ggsave("grExcesMortalite.png",plot = graph.ExcesMortalite, bg = "white", width=12)
