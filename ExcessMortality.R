@@ -7,6 +7,8 @@ library(ggpubr)
 library(ISOweek)
 library(ggthemes)
 library(patchwork)
+library(grid)
+
 temp <- dirname(rstudioapi::getSourceEditorContext()$path)
 if (getwd()!=temp){setwd(temp)}
 
@@ -175,6 +177,7 @@ Sentinelles$iso.date <- ISOweek2date(Sentinelles$weekTemp)
 Sentinelles$ISO.week <- date2ISOweek(Sentinelles$iso.date)
 Sentinelles <- Sentinelles %>%
    arrange(ISO.week)
+Sentinelles$inc100 <- as.numeric(Sentinelles$inc100)
 
 SentinellesMerge<-Sentinelles%>%
    subset(select = c(ISO.week,inc100))
@@ -349,13 +352,13 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
    geom_line(aes(x=Date, y=DECES, color = "obs"),size=0.5) +
    geom_line(aes(x=Date, y=DecesAttendus, color = "attendu"),size=1) +
     geom_line(aes(x=Date, y=DecesFit, color = "fit"),size=0.4) +
-   scale_color_manual(name =" Nombre de décés ",
-                      labels = c("attendus","prédits","observés"),
+   scale_color_manual(name =" Nb. de décés ",
+                      labels = c("attendus en abs. d'épidémie","prédits","observés"),
                       values = c("obs" = "black", "attendu" = "blue","fit" = "green"))+
    geom_ribbon(aes(x=Date, 
                    ymin = DecesAttendus , 
                    ymax = DecesCovid, 
-                   fill="Décés hospitaliers du COVID"), alpha=0.5) +
+                   fill="Décés hosp. du COVID"), alpha=0.5) +
    geom_ribbon(aes(x=Date, 
                    ymin = DecesAttendus - 1.96*DecesAttendusSE, 
                    ymax = DecesAttendus + 1.96*DecesAttendusSE, 
@@ -363,7 +366,7 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
    scale_fill_manual(c("",""),values=c("purple","blue")) +
   theme_minimal()+
   theme(plot.title = element_text(size = 14, face = "bold"),
-         plot.subtitle = element_text(size = 12),
+         plot.subtitle = element_text(size = 10),
          plot.caption = element_text(size = 10, face = "italic"),
          legend.position = "top") +
    labs(x = NULL,
@@ -373,8 +376,28 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
 ggsave("gTimeSeriesPoisson.png",plot=gTimeSeriesPoisson, bg="white", height = 7, width =10)
 print(gTimeSeriesPoisson)
 
-gg_zoom(gTimeSeriesPoisson,
-        zoom_cmd = `AnneeNum` > 2020)
+# Plot les données en time series: zoom 2020-2023
+gTimeSeriesPoissonZoom<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2020)) +
+  geom_line(aes(x=Date, y=DECES, color = "obs"),size=0.5,color = "black", show.legend = FALSE) +
+  geom_line(aes(x=Date, y=DecesAttendus, color = "attendu"),size=1,color = "blue", show.legend = FALSE) +
+  geom_line(aes(x=Date, y=DecesFit, color = "fit"),size=0.4,color='green',show.legend = FALSE) +
+  geom_ribbon(aes(x=Date, 
+                  ymin = DecesAttendus , 
+                  ymax = DecesCovid, 
+                  fill="Décés hospitaliers du COVID"),fill="purple",show.legend = FALSE, alpha=0.5) +
+  geom_ribbon(aes(x=Date, 
+                  ymin = DecesAttendus - 1.96*DecesAttendusSE, 
+                  ymax = DecesAttendus + 1.96*DecesAttendusSE, 
+                  fill="Sur/sous-mortalité normale"), alpha=0.1,fill="blue", show.legend = FALSE) +
+  theme_minimal()+
+  theme(plot.title = element_text(size = 14, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        plot.caption = element_text(size = 10, face = "italic"),
+        legend.position = "top") +
+  labs(x = NULL,
+       y = NULL)
+ggsave("gTimeSeriesPoissonZoom.png",plot=gTimeSeriesPoissonZoom, bg="white", height = 7, width =10)
+print(gTimeSeriesPoissonZoom)
 
 dbMerge$WeekNum<-substr(ISOweek(dbMerge$Date), 6, 8) 
 dbMerge$Annee<-substr(ISOweek(dbMerge$Date), 1, 4)
@@ -427,5 +450,5 @@ graph.ExcesMortalite<-ggplot() +
 print(graph.ExcesMortalite)
 ggsave("grExcesMortalite.png",plot = graph.ExcesMortalite, bg = "white", width=12)
 
-gMortalite<-ggarrange(gTimeSeriesPoisson,graph.ExcesMortalite,nrow=2)
-ggsave("gMortalite.png",plot=gMortalite,bg="white",height=10, width=9)
+gMortalite<-ggarrange(gTimeSeriesPoisson, gTimeSeriesPoissonZoom, graph.ExcesMortalite,nrow=3)
+ggsave("gMortalite.png",plot=gMortalite,bg="white",height=12, width=9)
