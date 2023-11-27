@@ -20,30 +20,25 @@ url<-"https://www.insee.fr/fr/statistiques/fichier/4771989/T79JDEC.csv"
 dest<-"./HistoricalDataMortality.csv"
 data<-download.file(url, dest)
 
-# data from SPF
-url<-"https://www.data.gouv.fr/fr/datasets/r/d3a98a30-893f-47f7-96c5-2f4bcaaa0d71"
-dest<-'./SPF.csv'
-spf<-download.file(url, dest)
-
 # Data from Sentinelles
 url<-"https://www.sentiweb.fr/datasets/incidence-PAY-3.csv"
 dest<-'./SentinellesIncidenceGrippe.csv'
 Sentinelles<-download.file(url, dest)
 
-# Data from SI-VIC 
-url <- "https://www.data.gouv.fr/fr/datasets/r/08c18e08-6780-452d-9b8c-ae244ad529b3"
-dest <- "./sivic_donneeshospit.csv"
-sivic<- download.file(url,dest)
-
 # Insee data on mortality for 2020/2021/2022
-url<-"https://www.insee.fr/fr/statistiques/fichier/4487988/2023-10-27_detail.zip"
+url<-"https://www.insee.fr/fr/statistiques/fichier/4487988/2023-11-24_detail.zip"
 dest<-"./dataMortality.zip"
 download.file(url, dest)
 unzip(dest)
 
+# Donnees d'ensemble SPF
+url <- "https://www.data.gouv.fr/fr/datasets/r/f335f9ea-86e3-4ffa-9684-93c009d5e617"
+dest <- "./spf_donneesensemble.csv"
+spf<- download.file(url,dest)
+dbspf<- read_csv("spf_donneesensemble.csv")
+
 ##############################################################################################
 # Importe les données historiques des décés quotidiens et détaillées pour 2018-2021
-
 
 ## Import historical data from Insee: 
 db<-read.csv("./HistoricalDataMortality.csv",sep=";")
@@ -118,46 +113,51 @@ coef4<-model.Redressement$coefficients[[ 4 ]] # 1/(dist-10)^4
 # Complète les données historiques sur les décés quotidiens avec les données 
 # individuelles diffusées par l'Insee
 
-DecesFM_add <-  db %>%
-  filter(db$CHAMP=="FM")%>%
-  group_by(Date) %>%
-  summarise(DECES=n())
 
-DecesFE_add <-  db %>%
+# Fonction de redressement des décès
+Redressement <- function(df) {
+  df %>%
+    mutate(
+      Annee = as.character(format(as.Date(Date, format = "%d/%m/%Y"), "%Y")),
+      Mois = as.character(format(as.Date(Date, format = "%d/%m/%Y"), "%m")),
+      MoisJour = as.character(format(as.Date(Date, format = "%d/%m/%Y"), "%m/%d"))
+    ) %>%
+    mutate(distadj = c(nrow(df):1),
+           coef1 = c(rep(coef1)),
+           coef2 = c(rep(coef2)),
+           coef3 = c(rep(coef3)),
+           coef4 = c(rep(coef4)),
+           coefredress = 1 + coef1 / distadj + coef2 / (distadj)^2 + coef3 / (distadj)^3 + coef4 / (distadj)^4,
+           DECES = DECES * coefredress)
+}
+
+# Deces France entière
+DecesFE_add <- db %>%
   group_by(Date) %>%
-  summarise(DECES=n())
+  summarise(DECES = n()) %>%
+  Redressement() %>%
+  mutate(
+    Annee = as.character(format(as.Date(Date, format = "%d/%m/%Y"), "%Y")),
+    Mois = as.character(format(as.Date(Date, format = "%d/%m/%Y"), "%m")),
+    MoisJour = as.character(format(as.Date(Date, format = "%d/%m/%Y"), "%m/%d"))
+  )
+
+# Deces France métropolitaine
+DecesFM_add <- db %>%
+  filter(CHAMP == "FM") %>%
+  group_by(Date) %>%
+  summarise(DECES = n()) %>%
+  Redressement()%>%
+  mutate(
+    Annee = as.character(format(as.Date(Date, format = "%d/%m/%Y"), "%Y")),
+    Mois = as.character(format(as.Date(Date, format = "%d/%m/%Y"), "%m")),
+    MoisJour = as.character(format(as.Date(Date, format = "%d/%m/%Y"), "%m/%d"))
+  )
 
 # Fusionne les données récentes avec les données historiques
 DecesFE<-bind_rows(DecesFE,DecesFE_add)
 DecesFM<-bind_rows(DecesFM,DecesFM_add)
 
-DecesFE$Annee<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%Y"))
-DecesFE$Mois<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%m"))
-DecesFE$MoisJour<-as.character(format(as.Date(DecesFE$Date, format="%d/%m/%Y"),"%m/%d"))
-
-DecesFM$Annee<-as.character(format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%Y"))
-DecesFM$Mois<-as.character(format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%m"))
-DecesFM$MoisJour<-as.character(format(as.Date(DecesFM$Date, format="%d/%m/%Y"),"%m/%d"))
-
-# Redressement
-# crée la variable de distance
-DecesFE$distadj <- c(nrow(DecesFE):1)
-DecesFM$distadj <- c(nrow(DecesFM):1)
-# crée des vecteurs avec les coefficients
-DecesFE$coef1 <- c(rep(coef1))
-DecesFE$coef2 <- c(rep(coef2))
-DecesFE$coef3 <- c(rep(coef3))
-DecesFE$coef4 <- c(rep(coef4))
-DecesFM$coef1 <- c(rep(coef1))
-DecesFM$coef2 <- c(rep(coef2))
-DecesFM$coef3 <- c(rep(coef3))
-DecesFM$coef4 <- c(rep(coef4))
-# crée le coefficient de redressement
-DecesFE$coefredress <- 1 + DecesFE$coef1/DecesFE$distadj + DecesFE$coef2/(DecesFE$distadj)^2  + DecesFE$coef3/(DecesFE$distadj)^3   + DecesFE$coef4/(DecesFE$distadj)^4 
-DecesFM$coefredress <- 1 + DecesFM$coef1/DecesFM$distadj + DecesFM$coef2/(DecesFM$distadj)^2  + DecesFM$coef3/(DecesFM$distadj)^3   + DecesFM$coef4/(DecesFM$distadj)^4 
-# correction des séries de décés
-DecesFE$DECES<- DecesFE$DECES*DecesFE$coefredress 
-DecesFM$DECES<- DecesFM$DECES*DecesFM$coefredress 
 
 ##############################################################################################
 # Aggregation hebdo et estimation de la tendance hors-épidémie
@@ -183,10 +183,6 @@ SentinellesMerge<-Sentinelles%>%
    subset(select = c(ISO.week,inc100))
 
 # Donnees d'ensemble SPF
-url <- "https://www.data.gouv.fr/fr/datasets/r/f335f9ea-86e3-4ffa-9684-93c009d5e617"
-dest <- "./spf_donneesensemble.csv"
-spf<- download.file(url,dest)
-dbspf<- read_csv("spf_donneesensemble.csv")
 dbspfhebdo <- dbspf %>%
    tq_transmute(select     = incid_dchosp,
                 mutate_fun = apply.weekly,
@@ -276,75 +272,6 @@ dbMerge$DecesAttendusSE <- sqrt(phiPoisson*dbMerge$DecesAttendus )
 DecesFit<-predict(ModelPoisson,newdata=dbMerge,type = c("response"))
 dbMerge<-cbind(dbMerge,DecesFit)
 dbMerge$Resid<-dbMerge$DECES-dbMerge$DecesFit
-
-
-## Defines a function to create a zoom plot:
-gg_zoom <- function(.plot, zoom_cmd, draw_box = TRUE, box_nudge = 1, to_label = FALSE, label) {
-  
-  ## use enquo for tidyeval syntax
-  zoom_cmd <- dplyr::enquo(zoom_cmd)
-  
-  ## subset data to zoom in on
-  zoom_data <-
-    .plot$data %>%
-    dplyr::filter(!!zoom_cmd) 
-  
-  ## build the "zoom plot" based on the original ggplot object
-  zoom_plot <- .plot
-  ## coerce the data element to be the filtered data
-  zoom_plot$data <- zoom_data
-  
-  ## if label  arg then add a repel text label
-  if(to_label) {
-    
-    ## tidyeval syntax allows for a bare column name to be supplied
-    label <- dplyr::enquo(label)
-    
-    zoom_plot <-
-      zoom_plot +
-      ggrepel::geom_text_repel(aes(label = !!label))
-  }
-  
-  ## if draw box then add a box around data used in zoom
-  if(draw_box) {
-    
-    ## need to get x and y variables (stored as quosures) from ggplot2 object
-    x <- .plot$mapping$x
-    y <- .plot$mapping$y
-    
-    ## create min/max x and y values for box around full plot
-    box_data <- 
-      zoom_data %>%
-      dplyr::summarise(
-        xmin = min(!!x, na.rm = TRUE),
-        xmax = max(!!x, na.rm = TRUE),
-        ymin = min(!!y, na.rm = TRUE),
-        ymax = max(!!y, na.rm = TRUE)) %>%
-      ## add to min and max so that the box sits just outside point
-      dplyr::mutate(
-        xmin = xmin -  box_nudge,
-        xmax = xmax + box_nudge,
-        ymin = ymin -  box_nudge,
-        ymax = ymax +  box_nudge)
-    
-    ## use geom_rect to add to the plot
-    .plot <-
-      .plot +
-      ggplot2::geom_rect(
-        ggplot2::aes(xmin = box_data$xmin, 
-                     xmax = box_data$xmax, 
-                     ymin = box_data$ymin, 
-                     ymax = box_data$ymax), 
-        fill = NA, 
-        col = "grey", 
-        lty = "dotted")
-    
-  }
-  
-  ## return in a basic patchwork layout
-  .plot + zoom_plot
-  
-}
 
 
 # Plot les données en time series

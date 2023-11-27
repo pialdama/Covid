@@ -16,7 +16,7 @@ exit <- function() {
 }
 
 VARFirstDiff <- 1 
-ComputeIRFandFEVD <- 0 # produire les graphiques d'IRF et de FEVD
+ComputeIRFandFEVD <- 1 # produire les graphiques d'IRF et de FEVD
 lissageLOESS <- 1 # si 0 pas de lissage LOESS des series
 
 ####################################################
@@ -75,7 +75,7 @@ gCorrectionJoursFeries <- ggplot(data = dbspf) +
   geom_line(aes(x = date, y = posAdj, color = "Corrigé des jours fériés"), size=.8) +
   scale_y_log10(labels = label_number(suffix = " k", scale = 1e-3)) +
   scale_x_date(date_label = "%Y-%m") +
-  theme_pubr(base_size = 8) +
+  theme_minimal(base_size = 8) +
   theme(legend.position = "bottom") +
   scale_color_manual(name = "",
                      values = c("Brut" = "blue",
@@ -149,7 +149,7 @@ gRcompare <- ggplot(data = filter(dbspf, dbspf$date > "2020-07-01")) +
     title = "Estimation du taux de reproduction effectif et comparaison à la mesure SPF",
     caption = "Notes : calcul du R effectif à partir du package EpiEstim (mean_si = 5.19, std_si = 0.42). \nSource: Santé Publique France. \n Calculs : P. Aldama @paldama"
   ) +
-  theme_pubr(base_size = 8) + theme(legend.position = "bottom")
+  theme_minimal(base_size = 8) + theme(legend.position = "bottom")
 
 
 print(gRcompare)
@@ -224,7 +224,7 @@ gCas<-ggplot(data = db) +
                      values = c("Brut" = "black",
                                 "Tendance" = "red")) + 
   scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
-  theme_pubr(base_size = 8) +
+  theme_minimal(base_size = 8) +
   labs(title = "Cas positifs (corrigés des jours fériés)",y=NULL,x=NULL)
 
 gHosp<-ggplot(data = db) +
@@ -234,7 +234,7 @@ gHosp<-ggplot(data = db) +
                      values = c("Brut" = "black",
                                 "Tendance" = "red")) + 
   scale_y_continuous(labels = label_number(suffix = " k", scale = 1e-3)) +
-  theme_pubr(base_size = 8) +
+  theme_minimal(base_size = 8) +
   labs(title = "Lits en hospitalisation conventionnelle",y=NULL,x=NULL)
 
 gRea<-ggplot(data = db) +
@@ -243,7 +243,7 @@ gRea<-ggplot(data = db) +
   scale_color_manual(name = "",
                      values = c("Brut" = "black",
                                 "Tendance" = "red")) + 
-  theme_pubr(base_size = 8) +
+  theme_minimal(base_size = 8) +
   labs(title = "Lits en soins critiques",y=NULL,x=NULL)
 
 
@@ -256,7 +256,7 @@ gDeces<-ggplot(data = db) +
       "Brut" = "black",
       "Tendance" = "red")
   ) + 
-  theme_pubr(base_size = 8) +
+  theme_minimal(base_size = 8) +
   labs(title = "Décès hospitaliers",y=NULL,x=NULL)
 
 gDonnees<-ggarrange(gCas, gHosp, gRea, gDeces, 
@@ -282,7 +282,6 @@ ConfidenceLevel <- 0.9
 # Preparation du dataset
 OutofSample <- 0
 HorizonForecast <- 7 * (2)
-LengthGraph <- length(DataEpiVAR) # longueur des graphiques
 
 debFcst <- LastObsCas - OutofSample
 dateFcst <-
@@ -315,6 +314,9 @@ FirstDayFcst <- debFcst + 1
        na.omit %>%
        ts()
    }
+
+LengthGraph <- length(DataEpiVAR) # longueur des graphiques
+
 
 # Estimation VAR
 OptimalLag<-VARselect(DataEpiVAR,lag.max = 50, type=c("none"))
@@ -587,12 +589,11 @@ gIRF <- multiple_varirf %>%
   geom_hline(yintercept = 0, color = "black") +
   geom_ribbon(aes(fill = impulse), alpha = .1) +
   geom_line(aes(color = impulse), size = 0.8) +
-  theme_pubr(base_size = 8) +
+  theme_minimal(base_size = 8) +
   scale_color_viridis(discrete = TRUE) +
   scale_fill_viridis(discrete = TRUE) +
   ggtitle("Fonctions impulsion-réponse orthogonalisées du modèle EpiVAR") +
-  facet_grid(factor(impulse, levels = c("r", "cas", "hosp", "rea", "dc")) ~
-               factor(response, levels = c("r", "cas", "hosp", "rea", "dc")),
+  facet_wrap(. ~factor(response, levels = c("r", "cas", "hosp", "rea", "dc")),
              scale = "free") +
   scale_x_continuous(sec.axis = sec_axis(
     ~ . ,
@@ -644,7 +645,7 @@ gFEVD <- fevd_df %>%
   ggplot(aes(x = period, y = values, fill = impulse)) +
   geom_area(stat = "identity",
             position = "stack") +
-  theme_pubr(base_size = 8) + scale_fill_viridis(discrete = TRUE) +
+  theme_minimal(base_size = 8) + scale_fill_viridis(discrete = TRUE) +
   ggtitle(
     "Décomposition de la variance de l'erreur de prévision selon les chocs dans le modèle EpiVAR"
   ) +
