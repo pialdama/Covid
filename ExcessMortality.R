@@ -354,6 +354,7 @@ graph.ExcesMortalite<-ggplot() +
                show.legend = FALSE,
                na.rm=TRUE,
                color = "lightblue",
+               fill = "lightblue",
                size = 1.25,
                span=0.1)  +
     scale_color_viridis_d() +
@@ -369,13 +370,14 @@ graph.ExcesMortalite<-ggplot() +
         y = NULL,
         color = NULL,
         title = "Excés de mortalité en France de 2020 à 2023",
-        subtitle = "La courbe en bleu-ciel représente l'excés de mortalité moyen sur la période 2014-2019, principlement lié aux épidémies grippales",
-        caption = "Sources : Santé Publique France, Insee et Réseau Sentinelles.\nCalculs et erreurs : P. Aldama / @paldama")
-
-
+        subtitle = "En bleu-ciel, la coubre représente l'excés de mortalité moyen sur la période 2014-2019, tandis que l'aire représentent l'intervalle de confiance à 10%.",
+        caption = "L'excès de mortalité est calculé comme la somme cumulée des écarts de la mortalité observée avec la mortalité attendue
+                  en absence d'épidemie.
+                  Il tient néanmoins compte de l'augmentation saisonnière de la mortalité, plus élevée en hiver et plus faible en été.
+                  Sources : Santé Publique France, Insee et Réseau Sentinelles. Calculs et erreurs : P. Aldama / @paldama")
 
 print(graph.ExcesMortalite)
 ggsave("grExcesMortalite.png",plot = graph.ExcesMortalite, bg = "white", width=12)
 
 gMortalite<-ggarrange(gTimeSeriesPoisson, gTimeSeriesPoissonZoom, graph.ExcesMortalite,nrow=3)
-ggsave("gMortalite.png",plot=gMortalite,bg="white",height=12, width=9)
+ggsave("gMortalite.png",plot=gMortalite,bg="white",height=15, width=9)
