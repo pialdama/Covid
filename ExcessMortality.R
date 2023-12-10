@@ -37,6 +37,22 @@ dest <- "./spf_donneesensemble.csv"
 spf<- download.file(url,dest)
 dbspf<- read_csv("spf_donneesensemble.csv")
 
+# Old data from SPF
+url<-"https://www.data.gouv.fr/fr/datasets/r/d3a98a30-893f-47f7-96c5-2f4bcaaa0d71"
+dest<-'./spf_donneesensemble_old.csv'
+spfold<-download.file(url, dest)
+dbspf_old<- read_csv("spf_donneesensemble_old.csv")
+
+# Merge the old SPF dataset with the new.
+dbspf<-full_join(dbspf,dbspf_old,by = "date")
+
+# Replace NAs in esms_dc by using the old serie
+dbspf<-dbspf %>%
+  mutate(esms_dc = coalesce(esms_dc,total_deces_ehpad)) %>%
+  mutate(incid_dcesms = esms_dc-lag(esms_dc,1)) %>%
+  mutate(incid_dctot = incid_dchosp + incid_dcesms)
+  
+
 ##############################################################################################
 # Importe les données historiques des décés quotidiens et détaillées pour 2018-2021
 
@@ -184,10 +200,13 @@ SentinellesMerge<-Sentinelles%>%
 
 # Donnees d'ensemble SPF
 dbspfhebdo <- dbspf %>%
-   tq_transmute(select     = incid_dchosp,
+   tq_transmute(select     = c(incid_dchosp,incid_dctot,incid_dcesms) ,
                 mutate_fun = apply.weekly,
                 FUN        = mean)
 dbspfhebdo$incid_dchosp<-round(dbspfhebdo$incid_dchosp*7) #utilise la moyenne pour éviter le biais de semaine incompléte
+dbspfhebdo$incid_dctot<-round(dbspfhebdo$incid_dctot*7) #utilise la moyenne pour éviter le biais de semaine incompléte
+dbspfhebdo$incid_dcesms<-round(dbspfhebdo$incid_dcesms*7) #utilise la moyenne pour éviter le biais de semaine incompléte
+
 dbspfhebdo$ISO.week<-date2ISOweek(dbspfhebdo$date)
 dbspfhebdo<-subset( dbspfhebdo, select = -date )
 
@@ -205,6 +224,9 @@ DecesFEhebdo$DECES<-round(DecesFEhebdo$DECES)
 dbMerge<-left_join(DecesFEhebdo,SentinellesMerge,by = "ISO.week")
 dbMerge<-full_join(dbMerge,dbspfhebdo,keep=FALSE,by="ISO.week")
 dbMerge$incid_dchosp<-replace_na(dbMerge$incid_dchosp, 0)
+dbMerge$incid_dctot<-replace_na(dbMerge$incid_dctot, 0)
+dbMerge$incid_dcesms<-replace_na(dbMerge$incid_dcesms, 0)
+
 dbMergeNAs <- dbMerge[rowSums(is.na(dbMerge)) > 0,]
 dbMerge<-drop_na(dbMerge)
 dbMerge$Annee<-format(as.Date(dbMerge$Date, format="%d/%m/%Y"),"%Y")
@@ -240,12 +262,12 @@ for (year in target_years) {
   names(dbMerge)[ncol(dbMerge)] <- col_name  # Rename the last column
 }
 
-# Estime le modéle quasi-Poisson de 2014 à 2019
+# Estime le modéle quasi-Poisson de 2014 a 2023
 dbMerge$t<-c(1:nrow(dbMerge))
 dbMerge$cose<-cos(2*pi*dbMerge$t/52)
 dbMerge$sine<-sin(2*pi*dbMerge$t/52)
 ModelPoisson<-glm( 
-   DECES ~ t + cose + sine + lead(incid_dchosp,1) + inc100 + SeasonalDummy_2014*inc100 +  SeasonalDummy_2015*inc100 +  SeasonalDummy_2016*inc100 +
+   DECES ~ t + cose + sine + lead(incid_dctot,1) + inc100 + SeasonalDummy_2014*inc100 +  SeasonalDummy_2015*inc100 +  SeasonalDummy_2016*inc100 +
      SeasonalDummy_2017*inc100 + SeasonalDummy_2018*inc100 +  SeasonalDummy_2019*inc100 +  SeasonalDummy_2020*inc100 +
      SeasonalDummy_2021*inc100 +  SeasonalDummy_2022*inc100 +  SeasonalDummy_2023*inc100 ,
    data = filter(dbMerge,dbMerge$Annee >= 2014 & dbMerge$Annee <= 2023),
@@ -266,7 +288,7 @@ coefSin<-ModelPoisson$coefficients[[ 4 ]]
 coefIncidDecesCovid<-ModelPoisson$coefficients[[ 5 ]] 
 
 dbMerge$DecesAttendus <- exp((coefIntercept + coefTrend*dbMerge$t + coefCos*dbMerge$cose + coefSin*dbMerge$sine))
-dbMerge$DecesCovid <- dbMerge$DecesAttendus+lead(dbMerge$incid_dchosp, 1)
+dbMerge$DecesCovid <- dbMerge$DecesAttendus+lead(dbMerge$incid_dctot, 1)
 
 dbMerge$DecesAttendusSE <- sqrt(phiPoisson*dbMerge$DecesAttendus )
 DecesFit<-predict(ModelPoisson,newdata=dbMerge,type = c("response"))
@@ -279,13 +301,13 @@ gTimeSeriesPoisson<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2014)) +
    geom_line(aes(x=Date, y=DECES, color = "obs"),size=0.5) +
    geom_line(aes(x=Date, y=DecesAttendus, color = "attendu"),size=1) +
     geom_line(aes(x=Date, y=DecesFit, color = "fit"),size=0.4) +
-   scale_color_manual(name =" Nb. de décés ",
+   scale_color_manual(name = NULL,
                       labels = c("attendus en abs. d'épidémie","prédits","observés"),
                       values = c("obs" = "black", "attendu" = "blue","fit" = "green"))+
    geom_ribbon(aes(x=Date, 
                    ymin = DecesAttendus , 
                    ymax = DecesCovid, 
-                   fill="Décés hosp. du COVID"), alpha=0.5) +
+                   fill="Décés Covid (hôpital + ESMS)"), alpha=0.5) +
    geom_ribbon(aes(x=Date, 
                    ymin = DecesAttendus - 1.96*DecesAttendusSE, 
                    ymax = DecesAttendus + 1.96*DecesAttendusSE, 
@@ -311,7 +333,7 @@ gTimeSeriesPoissonZoom<-ggplot(data=filter(dbMerge,dbMerge$Annee>=2020)) +
   geom_ribbon(aes(x=Date, 
                   ymin = DecesAttendus , 
                   ymax = DecesCovid, 
-                  fill="Décés hospitaliers du COVID"),fill="purple",show.legend = FALSE, alpha=0.5) +
+                  fill="Décés Covid (hôpital + ESMS)"),fill="purple",show.legend = FALSE, alpha=0.5) +
   geom_ribbon(aes(x=Date, 
                   ymin = DecesAttendus - 1.96*DecesAttendusSE, 
                   ymax = DecesAttendus + 1.96*DecesAttendusSE, 
@@ -370,14 +392,13 @@ graph.ExcesMortalite<-ggplot() +
         y = NULL,
         color = NULL,
         title = "Excés de mortalité en France de 2020 à 2023",
-        subtitle = "En bleu-ciel, la coubre représente l'excés de mortalité moyen sur la période 2014-2019, tandis que l'aire représentent l'intervalle de confiance à 10%.",
+        subtitle = "En bleu-ciel, la coubre représente l'excés de mortalité moyen sur la période 2014-2019, tandis que l'aire représentent l'intervalle de \nconfiance à 10%.",
         caption = "L'excès de mortalité est calculé comme la somme cumulée des écarts de la mortalité observée avec la mortalité attendue
-                  en absence d'épidemie.
-                  Il tient néanmoins compte de l'augmentation saisonnière de la mortalité, plus élevée en hiver et plus faible en été.
-                  Sources : Santé Publique France, Insee et Réseau Sentinelles. Calculs et erreurs : P. Aldama / @paldama")
+                  en absence d'épidemie. Il tient néanmoins compte de l'augmentation saisonnière de la mortalité, plus élevée en hiver et plus faible en été.
+                  Sources : Santé Publique France, Insee et Réseau Sentinelles. \nCalculs et erreurs éventuelles : P. Aldama")
 
 print(graph.ExcesMortalite)
 ggsave("grExcesMortalite.png",plot = graph.ExcesMortalite, bg = "white", width=12)
 
 gMortalite<-ggarrange(gTimeSeriesPoisson, gTimeSeriesPoissonZoom, graph.ExcesMortalite,nrow=3)
-ggsave("gMortalite.png",plot=gMortalite,bg="white",height=15, width=9)
+ggsave("gMortalite.png",plot=gMortalite,bg="white",height=14, width=10)
